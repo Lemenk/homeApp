@@ -1,0 +1,151 @@
+-- MySQL 8 生产建表脚本（手动执行：mysql -u root -p < init.sql）
+CREATE DATABASE IF NOT EXISTS family_home DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE family_home;
+
+CREATE TABLE IF NOT EXISTS t_user (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  openid VARCHAR(64),
+  phone VARCHAR(20),
+  nickname VARCHAR(64),
+  avatar VARCHAR(255),
+  status TINYINT DEFAULT 1 COMMENT '1正常 0删除',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_phone (phone),
+  UNIQUE KEY uk_openid (openid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户';
+
+CREATE TABLE IF NOT EXISTS t_family (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(64) NOT NULL,
+  creator_id BIGINT NOT NULL,
+  invite_code VARCHAR(16) NOT NULL UNIQUE,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='家庭';
+
+CREATE TABLE IF NOT EXISTS t_family_member (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  family_id BIGINT NOT NULL,
+  user_id BIGINT NOT NULL,
+  role VARCHAR(16) NOT NULL COMMENT 'creator/member',
+  joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_family_user (family_id, user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='家庭成员关系';
+
+CREATE TABLE IF NOT EXISTS t_ledger (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(64) NOT NULL,
+  type VARCHAR(16) NOT NULL COMMENT 'public/personal',
+  icon VARCHAR(32),
+  theme VARCHAR(32),
+  owner_id BIGINT NOT NULL,
+  family_id BIGINT COMMENT '公共账本关联家庭',
+  status TINYINT DEFAULT 1 COMMENT '1正常 0删除',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='账本';
+
+CREATE TABLE IF NOT EXISTS t_ledger_member (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  ledger_id BIGINT NOT NULL,
+  user_id BIGINT NOT NULL,
+  role VARCHAR(16) NOT NULL,
+  joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_ledger_user (ledger_id, user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='账本成员关系';
+
+CREATE TABLE IF NOT EXISTS t_category (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  ledger_id BIGINT NOT NULL,
+  type VARCHAR(16) NOT NULL COMMENT 'expense/income',
+  name VARCHAR(32) NOT NULL,
+  icon VARCHAR(32),
+  sort INT DEFAULT 0,
+  enabled TINYINT DEFAULT 1,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='分类';
+
+CREATE TABLE IF NOT EXISTS t_tag (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  ledger_id BIGINT NOT NULL,
+  name VARCHAR(32) NOT NULL,
+  color VARCHAR(16),
+  created_by BIGINT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='标签';
+
+CREATE TABLE IF NOT EXISTS t_account (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  ledger_id BIGINT NOT NULL,
+  type VARCHAR(16) NOT NULL COMMENT 'asset(资金)/credit(信贷)/stored_value(储值)',
+  name VARCHAR(64) NOT NULL,
+  icon VARCHAR(32),
+  initial_balance DECIMAL(15,2) DEFAULT 0,
+  balance DECIMAL(15,2) DEFAULT 0,
+  status TINYINT DEFAULT 1,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='账户';
+
+CREATE TABLE IF NOT EXISTS t_bill (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  ledger_id BIGINT NOT NULL,
+  type VARCHAR(16) NOT NULL COMMENT 'expense/income/transfer',
+  category_id BIGINT,
+  member_id BIGINT COMMENT '记账人',
+  amount DECIMAL(15,2) NOT NULL,
+  bill_date DATETIME NOT NULL,
+  remark VARCHAR(255),
+  created_by BIGINT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY idx_ledger_date (ledger_id, bill_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='账单';
+
+CREATE TABLE IF NOT EXISTS t_bill_account (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  bill_id BIGINT NOT NULL,
+  account_id BIGINT NOT NULL,
+  direction VARCHAR(8) NOT NULL COMMENT 'out/in',
+  amount DECIMAL(15,2) NOT NULL,
+  pair_id BIGINT COMMENT '转账配对',
+  KEY idx_bill (bill_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='账单-账户明细';
+
+CREATE TABLE IF NOT EXISTS t_bill_tag (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  bill_id BIGINT NOT NULL,
+  tag_id BIGINT NOT NULL,
+  UNIQUE KEY uk_bill_tag (bill_id, tag_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='账单-标签';
+
+CREATE TABLE IF NOT EXISTS t_budget (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  ledger_id BIGINT NOT NULL,
+  category_id BIGINT NOT NULL,
+  amount DECIMAL(15,2) NOT NULL,
+  period_type VARCHAR(16) NOT NULL COMMENT 'monthly/custom',
+  start_date DATE,
+  end_date DATE,
+  remark VARCHAR(64),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='预算';
+
+CREATE TABLE IF NOT EXISTS t_audit_log (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  ledger_id BIGINT NOT NULL,
+  bill_id BIGINT,
+  operator_id BIGINT NOT NULL,
+  action VARCHAR(16) NOT NULL COMMENT 'create/update/delete',
+  change_detail VARCHAR(2000),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='操作留痕';
+
+CREATE TABLE IF NOT EXISTS t_account_balance_log (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  account_id BIGINT NOT NULL,
+  old_balance DECIMAL(15,2),
+  new_balance DECIMAL(15,2),
+  reason VARCHAR(255),
+  operator_id BIGINT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='余额调整留痕';
