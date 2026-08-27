@@ -96,7 +96,7 @@ function onTypeChange(t: 'public' | 'personal') {
 
 function goFamily() {
   showNew.value = false
-  router.push('/family')
+  familyStore.openSetup()
 }
 
 function openLedger(l: LedgerVO) {

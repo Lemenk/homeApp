@@ -8,7 +8,6 @@
         <el-menu-item index="/accounts">账户</el-menu-item>
         <el-menu-item index="/budgets">预算</el-menu-item>
         <el-menu-item index="/statistics">统计</el-menu-item>
-        <el-menu-item index="/family">家庭</el-menu-item>
         <el-menu-item index="/settings">设置</el-menu-item>
       </el-menu>
     </el-aside>
@@ -39,7 +38,8 @@
             </span>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item command="logout">退出登录</el-dropdown-item>
+                <el-dropdown-item command="family">家庭</el-dropdown-item>
+                <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -50,6 +50,7 @@
       </el-main>
     </el-container>
   </el-container>
+  <FamilySetupDialog v-model="familyStore.setupVisible" />
 </template>
 
 <script setup lang="ts">
@@ -58,10 +59,13 @@ import { useRouter } from 'vue-router'
 import { ArrowDown } from '@element-plus/icons-vue'
 import { useLedgerStore } from '@/stores/ledger'
 import { useUserStore } from '@/stores/user'
+import { useFamilyStore } from '@/stores/family'
+import FamilySetupDialog from '@/components/FamilySetupDialog.vue'
 
 const router = useRouter()
 const ledgerStore = useLedgerStore()
 const userStore = useUserStore()
+const familyStore = useFamilyStore()
 
 const currentId = computed({
   get: () => ledgerStore.currentLedgerId,
@@ -82,7 +86,13 @@ function goRecord() {
 }
 
 function onUserCommand(cmd: string) {
-  if (cmd === 'logout') {
+  if (cmd === 'family') {
+    if (familyStore.family) {
+      router.push('/family')
+    } else {
+      familyStore.openSetup()
+    }
+  } else if (cmd === 'logout') {
     userStore.logout()
     router.push('/login')
   }

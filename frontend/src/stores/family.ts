@@ -5,11 +5,18 @@ import type { FamilyVO } from '@/types/family'
 export const useFamilyStore = defineStore('family', {
   state: () => ({
     family: null as FamilyVO | null,
+    setupVisible: false,
   }),
   getters: {
     hasFamily: (s) => !!s.family,
   },
   actions: {
+    openSetup() {
+      this.setupVisible = true
+    },
+    closeSetup() {
+      this.setupVisible = false
+    },
     async fetch() {
       this.family = await myFamily()
     },
