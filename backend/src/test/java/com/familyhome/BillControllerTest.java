@@ -71,8 +71,8 @@ class BillControllerTest extends ApiTestBase {
     void createExpense_withMultiAccount_splitUpdated() throws Exception {
         String tk = token("13800000040");
         Long ledgerId = createPersonalLedger(tk, "私账");
-        Long a = createAccount(tk, ledgerId, "招商卡", "common", "1000");
-        Long b = createAccount(tk, ledgerId, "微信", "common", "500");
+        Long a = createAccount(tk, ledgerId, "招商卡", "asset", "1000");
+        Long b = createAccount(tk, ledgerId, "微信", "asset", "500");
         Long cat = firstExpenseCategory(tk, ledgerId);
 
         mockMvc.perform(postJson("/api/ledgers/" + ledgerId + "/bills",
@@ -93,7 +93,7 @@ class BillControllerTest extends ApiTestBase {
     void createExpense_splitMismatch_rejected() throws Exception {
         String tk = token("13800000041");
         Long ledgerId = createPersonalLedger(tk, "私账");
-        Long a = createAccount(tk, ledgerId, "卡A", "common", "1000");
+        Long a = createAccount(tk, ledgerId, "卡A", "asset", "1000");
         Long cat = firstExpenseCategory(tk, ledgerId);
 
         mockMvc.perform(postJson("/api/ledgers/" + ledgerId + "/bills",
@@ -107,7 +107,7 @@ class BillControllerTest extends ApiTestBase {
     void createIncome_increasesBalance() throws Exception {
         String tk = token("13800000042");
         Long ledgerId = createPersonalLedger(tk, "私账");
-        Long a = createAccount(tk, ledgerId, "工资卡", "common", "0");
+        Long a = createAccount(tk, ledgerId, "工资卡", "asset", "0");
         Long cat = objectMapper.readTree(mockMvc.perform(
                 get("/api/ledgers/" + ledgerId + "/categories").header("Authorization", "Bearer " + tk))
             .andReturn().getResponse().getContentAsString()).path("data").get(0).path("id").asLong();
@@ -126,8 +126,8 @@ class BillControllerTest extends ApiTestBase {
     void createTransfer_bothSidesUpdated() throws Exception {
         String tk = token("13800000043");
         Long ledgerId = createPersonalLedger(tk, "私账");
-        Long a = createAccount(tk, ledgerId, "卡A", "common", "1000");
-        Long b = createAccount(tk, ledgerId, "卡B", "common", "500");
+        Long a = createAccount(tk, ledgerId, "卡A", "asset", "1000");
+        Long b = createAccount(tk, ledgerId, "卡B", "asset", "500");
 
         mockMvc.perform(postJson("/api/ledgers/" + ledgerId + "/bills",
                 "{\"type\":\"transfer\",\"amount\":200," +
@@ -150,7 +150,7 @@ class BillControllerTest extends ApiTestBase {
                 get("/api/auth/me").header("Authorization", "Bearer " + otherTk))
             .andReturn().getResponse().getContentAsString()).path("data").path("id").asLong();
         Long ledgerId = createPersonalLedger(tk, "私账");
-        Long a = createAccount(tk, ledgerId, "卡", "common", "100");
+        Long a = createAccount(tk, ledgerId, "卡", "asset", "100");
         Long cat = firstExpenseCategory(tk, ledgerId);
 
         mockMvc.perform(postJson("/api/ledgers/" + ledgerId + "/bills",
@@ -181,7 +181,7 @@ class BillControllerTest extends ApiTestBase {
         Long publicLedgerId = ledgerNode.path("data").path("id").asLong();
         org.junit.jupiter.api.Assertions.assertNotEquals(ledgerId, publicLedgerId);
 
-        Long a = createAccount(creatorTk, publicLedgerId, "公共卡", "common", "1000");
+        Long a = createAccount(creatorTk, publicLedgerId, "公共卡", "asset", "1000");
         Long cat = firstExpenseCategory(creatorTk, publicLedgerId);
         Long memberUserId = objectMapper.readTree(mockMvc.perform(
                 get("/api/auth/me").header("Authorization", "Bearer " + memberTk))
@@ -199,7 +199,7 @@ class BillControllerTest extends ApiTestBase {
     void deleteBill_reversesBalance() throws Exception {
         String tk = token("13800000048");
         Long ledgerId = createPersonalLedger(tk, "私账");
-        Long a = createAccount(tk, ledgerId, "卡", "common", "1000");
+        Long a = createAccount(tk, ledgerId, "卡", "asset", "1000");
         Long cat = firstExpenseCategory(tk, ledgerId);
         JsonNode bill = objectMapper.readTree(mockMvc.perform(
                 postJson("/api/ledgers/" + ledgerId + "/bills",
@@ -219,7 +219,7 @@ class BillControllerTest extends ApiTestBase {
     void updateBill_adjustsBalance_andWritesAuditLog() throws Exception {
         String tk = token("13800000049");
         Long ledgerId = createPersonalLedger(tk, "私账");
-        Long a = createAccount(tk, ledgerId, "卡", "common", "1000");
+        Long a = createAccount(tk, ledgerId, "卡", "asset", "1000");
         Long cat = firstExpenseCategory(tk, ledgerId);
         JsonNode bill = objectMapper.readTree(mockMvc.perform(
                 postJson("/api/ledgers/" + ledgerId + "/bills",
@@ -248,7 +248,7 @@ class BillControllerTest extends ApiTestBase {
     void liabilityAccount_expense_increasesDebt() throws Exception {
         String tk = token("13800000050");
         Long ledgerId = createPersonalLedger(tk, "私账");
-        Long card = createAccount(tk, ledgerId, "信用卡", "liability", "0");
+        Long card = createAccount(tk, ledgerId, "信用卡", "credit", "0");
         Long cat = firstExpenseCategory(tk, ledgerId);
 
         mockMvc.perform(postJson("/api/ledgers/" + ledgerId + "/bills",
@@ -265,7 +265,7 @@ class BillControllerTest extends ApiTestBase {
     void listBills_withFilters() throws Exception {
         String tk = token("13800000051");
         Long ledgerId = createPersonalLedger(tk, "私账");
-        Long a = createAccount(tk, ledgerId, "卡", "common", "1000");
+        Long a = createAccount(tk, ledgerId, "卡", "asset", "1000");
         Long cat = firstExpenseCategory(tk, ledgerId);
         for (int i = 0; i < 3; i++) {
             mockMvc.perform(postJson("/api/ledgers/" + ledgerId + "/bills",

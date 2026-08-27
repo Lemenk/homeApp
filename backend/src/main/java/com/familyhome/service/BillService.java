@@ -4,14 +4,17 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.familyhome.common.BizException;
 import com.familyhome.dto.BillAccountItem;
+import com.familyhome.dto.BillLogVO;
 import com.familyhome.dto.BillQuery;
 import com.familyhome.dto.BillRequest;
 import com.familyhome.dto.BillVO;
 import com.familyhome.dto.PageResult;
 import com.familyhome.entity.Account;
+import com.familyhome.entity.AuditLog;
 import com.familyhome.entity.Bill;
 import com.familyhome.entity.BillAccount;
 import com.familyhome.entity.BillTag;
@@ -219,10 +222,10 @@ public class BillService {
         return toVO(bill);
     }
 
-    public List<com.familyhome.entity.AuditLog> billLogs(Long userId, Long billId) {
+    public List<BillLogVO> billLogs(Long userId, Long billId) {
         Bill bill = requireBill(billId);
         ledgerService.requireMember(bill.getLedgerId(), userId);
-        return auditLogService.listForBill(billId);
+        return auditLogService.listForBill(billId).stream().map(this::toLogVO).toList();
     }
 
     // ---------- 内部方法 ----------
@@ -328,7 +331,7 @@ public class BillService {
                 throw BizException.badRequest("账户不存在或不属于该账本");
             }
             BigDecimal delta = "in".equals(it.getDirection()) ? it.getAmount() : it.getAmount().negate();
-            if ("liability".equals(acc.getType())) {
+            if ("credit".equals(acc.getType())) {
                 delta = delta.negate();
             }
             acc.setBalance(acc.getBalance().add(delta));
@@ -345,7 +348,7 @@ public class BillService {
             }
             String reversed = "in".equals(it.getDirection()) ? "out" : "in";
             BigDecimal delta = "in".equals(reversed) ? it.getAmount() : it.getAmount().negate();
-            if ("liability".equals(acc.getType())) {
+            if ("credit".equals(acc.getType())) {
                 delta = delta.negate();
             }
             acc.setBalance(acc.getBalance().add(delta));
@@ -417,6 +420,62 @@ public class BillService {
             return objectMapper.writeValueAsString(detail);
         } catch (Exception e) {
             return "{}";
+        }
+    }
+
+    /** 把审计日志转成详情页展示用的 VO：补充操作人昵称 + 生成可读摘要 */
+    private BillLogVO toLogVO(AuditLog log) {
+        String operatorName = "";
+        if (log.getOperatorId() != null) {
+            try {
+                operatorName = userService.getById(log.getOperatorId()).getNickname();
+            } catch (Exception ignored) {
+                operatorName = "";
+            }
+        }
+        return new BillLogVO(log.getId(), log.getAction(), operatorName,
+            buildLogSummary(log.getChangeDetail()), log.getCreatedAt());
+    }
+
+    /** 从 changeDetail JSON 生成人可读的摘要，如「支出 ¥30.00 · 微信 · 午餐」 */
+    private String buildLogSummary(String changeDetail) {
+        if (changeDetail == null || changeDetail.isBlank()) {
+            return "";
+        }
+        try {
+            Map<String, Object> d = objectMapper.readValue(changeDetail, new TypeReference<Map<String, Object>>() { });
+            String type = d.get("type") == null ? "" : d.get("type").toString();
+            String typeCn = switch (type) {
+                case "expense" -> "支出";
+                case "income" -> "收入";
+                case "transfer" -> "转账";
+                default -> "账单";
+            };
+            StringBuilder sb = new StringBuilder(typeCn);
+            if (d.get("amount") != null) {
+                sb.append(" ¥").append(new BigDecimal(d.get("amount").toString()).stripTrailingZeros().toPlainString());
+            }
+            Object accountsObj = d.get("accounts");
+            if (accountsObj instanceof List<?> accounts && !accounts.isEmpty()) {
+                List<String> names = new ArrayList<>();
+                for (Object o : accounts) {
+                    if (o instanceof Map<?, ?> m && m.get("accountId") != null) {
+                        Account acc = accountMapper.selectById(Long.valueOf(m.get("accountId").toString()));
+                        if (acc != null) {
+                            names.add(acc.getName());
+                        }
+                    }
+                }
+                if (!names.isEmpty()) {
+                    sb.append(" · ").append(String.join("、", names));
+                }
+            }
+            if (d.get("remark") != null && !d.get("remark").toString().isBlank()) {
+                sb.append(" · ").append(d.get("remark"));
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            return changeDetail;
         }
     }
 }

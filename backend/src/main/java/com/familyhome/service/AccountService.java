@@ -91,7 +91,7 @@ public class AccountService {
         BigDecimal totalAssets = BigDecimal.ZERO;
         BigDecimal totalLiability = BigDecimal.ZERO;
         for (Account a : accounts) {
-            if ("liability".equals(a.getType())) {
+            if ("credit".equals(a.getType())) {
                 totalLiability = totalLiability.add(a.getBalance());
             } else {
                 totalAssets = totalAssets.add(a.getBalance());

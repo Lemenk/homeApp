@@ -49,7 +49,7 @@ class BudgetControllerTest extends ApiTestBase {
     private Long createAccount(String tk, Long ledgerId) throws Exception {
         JsonNode node = objectMapper.readTree(mockMvc.perform(
                 postJson("/api/ledgers/" + ledgerId + "/accounts",
-                    "{\"name\":\"卡\",\"type\":\"common\",\"initialBalance\":10000}")
+                    "{\"name\":\"卡\",\"type\":\"asset\",\"initialBalance\":10000}")
                     .header("Authorization", "Bearer " + tk))
             .andReturn().getResponse().getContentAsString());
         return node.path("data").path("id").asLong();

@@ -15,7 +15,7 @@ public class CreateAccountRequest {
     private String name;
 
     @NotBlank(message = "账户类型不能为空")
-    @Pattern(regexp = "common|liability|stored_value|investment", message = "账户类型不合法")
+    @Pattern(regexp = "asset|credit|stored_value", message = "账户类型不合法")
     private String type;
 
     @Size(max = 32)

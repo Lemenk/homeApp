@@ -29,10 +29,10 @@ describe('Phase 5 账户 API', () => {
 
   it('createAccount 透传类型与期初余额', async () => {
     httpMock.post.mockResolvedValue({ id: 1 })
-    await createAccount(1, { name: '信用卡', type: 'liability', initialBalance: 0 })
+    await createAccount(1, { name: '信用卡', type: 'credit', initialBalance: 0 })
     expect(httpMock.post).toHaveBeenCalledWith('/ledgers/1/accounts', {
       name: '信用卡',
-      type: 'liability',
+      type: 'credit',
       initialBalance: 0,
     })
   })

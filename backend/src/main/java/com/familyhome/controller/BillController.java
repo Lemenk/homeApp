@@ -3,9 +3,9 @@ package com.familyhome.controller;
 import com.familyhome.common.Result;
 import com.familyhome.dto.BillQuery;
 import com.familyhome.dto.BillVO;
+import com.familyhome.dto.BillLogVO;
 import com.familyhome.dto.BillRequest;
 import com.familyhome.dto.PageResult;
-import com.familyhome.entity.AuditLog;
 import com.familyhome.security.UserContext;
 import com.familyhome.service.BillService;
 import jakarta.validation.Valid;
@@ -59,7 +59,7 @@ public class BillController {
     }
 
     @GetMapping("/bills/{id}/logs")
-    public Result<List<AuditLog>> logs(@PathVariable Long id) {
+    public Result<List<BillLogVO>> logs(@PathVariable Long id) {
         return Result.ok(billService.billLogs(UserContext.require(), id));
     }
 }

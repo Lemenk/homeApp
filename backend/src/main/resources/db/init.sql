@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS t_tag (
 CREATE TABLE IF NOT EXISTS t_account (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   ledger_id BIGINT NOT NULL,
-  type VARCHAR(16) NOT NULL COMMENT 'common/liability/stored_value/investment',
+  type VARCHAR(16) NOT NULL COMMENT 'asset(资金)/credit(信贷)/stored_value(储值)',
   name VARCHAR(64) NOT NULL,
   icon VARCHAR(32),
   initial_balance DECIMAL(15,2) DEFAULT 0,

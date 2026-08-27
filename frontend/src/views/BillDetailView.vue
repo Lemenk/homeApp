@@ -40,10 +40,24 @@
     </el-card>
 
     <el-card v-if="logs.length" class="logs-card">
-      <template #header>操作记录（留痕）</template>
+      <template #header>
+        <div class="logs-head">
+          <span>操作记录（留痕）</span>
+          <span class="logs-count">共 {{ logs.length }} 条</span>
+        </div>
+      </template>
       <el-timeline>
-        <el-timeline-item v-for="log in logs" :key="log.id" :timestamp="formatTime(log.createdAt)">
-          {{ actionLabel(log.action) }} · {{ log.changeDetail }}
+        <el-timeline-item v-for="log in logs" :key="log.id" :timestamp="formatTime(log.createdAt)" placement="top">
+          <div class="log-item">
+            <el-tag :type="actionTagType(log.action)" size="small" effect="dark" class="log-action">
+              {{ actionLabel(log.action) }}
+            </el-tag>
+            <span class="log-summary">{{ log.summary || '—' }}</span>
+            <div class="log-meta">
+              <span class="log-operator">操作人：{{ log.operatorName || '未知' }}</span>
+              <span class="log-time">{{ formatTime(log.createdAt) }}</span>
+            </div>
+          </div>
         </el-timeline-item>
       </el-timeline>
     </el-card>
@@ -57,13 +71,13 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { deleteBill, getBill, billLogs } from '@/api/bill'
-import type { BillVO } from '@/api/bill'
+import type { BillVO, BillLogVO } from '@/api/bill'
 import BillFormDialog from '@/components/BillFormDialog.vue'
 
 const route = useRoute()
 const router = useRouter()
 const bill = ref<BillVO | null>(null)
-const logs = ref<any[]>([])
+const logs = ref<BillLogVO[]>([])
 const showForm = ref(false)
 const editing = ref<BillVO | null>(null)
 const billId = Number(route.params.id)
@@ -91,6 +105,9 @@ function formatTime(t?: string) {
 }
 function actionLabel(a: string) {
   return { create: '创建', update: '修改', delete: '删除' }[a] || a
+}
+function actionTagType(a: string) {
+  return { create: 'success', update: 'warning', delete: 'danger' }[a] || 'info'
 }
 
 async function load() {
@@ -143,5 +160,40 @@ onMounted(load)
 }
 .logs-card {
   margin-top: 16px;
+}
+.logs-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.logs-count {
+  font-size: 12px;
+  color: #909399;
+}
+.log-item {
+  background: var(--el-fill-color-lighter);
+  border-radius: 8px;
+  padding: 10px 12px;
+  line-height: 1.6;
+}
+.log-action {
+  margin-right: 8px;
+  vertical-align: middle;
+}
+.log-summary {
+  font-size: 14px;
+  color: var(--el-text-color-primary);
+  word-break: break-all;
+}
+.log-meta {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #909399;
+}
+.log-operator {
+  margin-right: 12px;
+}
+.log-time {
+  font-size: 12px;
 }
 </style>

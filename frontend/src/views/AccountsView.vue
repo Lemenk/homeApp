@@ -48,18 +48,30 @@
     </el-card>
 
     <!-- 新增账户 -->
-    <el-dialog v-model="showCreate" title="新增账户" width="440px">
+    <el-dialog v-model="showCreate" title="新增账户" width="480px">
       <el-form label-width="80px">
-        <el-form-item label="账户名称">
-          <el-input v-model="createForm.name" placeholder="如：工资卡 / 信用卡 / 余额宝" />
-        </el-form-item>
         <el-form-item label="账户类型">
-          <el-select v-model="createForm.type" style="width: 100%">
-            <el-option label="常用账户" value="common" />
-            <el-option label="负债账户（信用卡/房贷）" value="liability" />
-            <el-option label="储值账户（余额/卡券）" value="stored_value" />
-            <el-option label="投资账户" value="investment" />
-          </el-select>
+          <el-radio-group :model-value="createForm.type" @change="changeType">
+            <el-radio-button v-for="t in TYPE_ORDER" :key="t" :value="t">
+              {{ TYPE_LABELS[t] }}
+            </el-radio-button>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="推荐账户">
+          <div class="suggest-wrap">
+            <el-tag
+              v-for="s in suggestionsOf(createForm.type)"
+              :key="s"
+              class="suggest-tag"
+              :class="{ active: createForm.name === s }"
+              :effect="createForm.name === s ? 'dark' : 'plain'"
+              @click="pickSuggestion(s)"
+            >{{ s }}</el-tag>
+            <span class="suggest-hint">点击选择，也可下方自定义</span>
+          </div>
+        </el-form-item>
+        <el-form-item label="账户名称">
+          <el-input v-model="createForm.name" placeholder="自定义账户名称，如：家庭共用卡 / 我的公积金" />
         </el-form-item>
         <el-form-item label="期初余额">
           <el-input-number v-model="createForm.initialBalance" :precision="2" :controls="false" style="width: 100%" />
@@ -93,8 +105,16 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { listAccounts, createAccount, adjustBalance, summary } from '@/api/account'
-import type { AccountVO } from '@/api/account'
+import {
+  listAccounts,
+  createAccount,
+  adjustBalance,
+  summary,
+  ACCOUNT_TYPE_LABELS,
+  ACCOUNT_TYPE_ORDER,
+  ACCOUNT_SUGGESTIONS,
+} from '@/api/account'
+import type { AccountVO, AccountType } from '@/api/account'
 import { useLedgerStore } from '@/stores/ledger'
 
 const ledgerStore = useLedgerStore()
@@ -103,23 +123,35 @@ const summaryData = ref({ totalAssets: 0, totalLiability: 0, netAssets: 0, accou
 
 const showCreate = ref(false)
 const creating = ref(false)
-const createForm = reactive({ name: '', type: 'common', initialBalance: 0 })
+const createForm = reactive<{ name: string; type: AccountType; initialBalance: number }>({
+  name: '',
+  type: 'asset',
+  initialBalance: 0,
+})
 
 const showAdjust = ref(false)
 const adjusting = ref(false)
 const adjustTarget = ref<AccountVO | null>(null)
 const adjustForm = reactive({ newBalance: 0, reason: '' })
 
-const TYPE_LABELS: Record<string, string> = {
-  common: '常用账户',
-  liability: '负债账户',
-  stored_value: '储值账户',
-  investment: '投资账户',
-}
-const TYPE_ORDER = ['common', 'liability', 'stored_value', 'investment']
+const TYPE_LABELS: Record<string, string> = ACCOUNT_TYPE_LABELS
+const TYPE_ORDER = ACCOUNT_TYPE_ORDER
 
 function typeLabel(t: string) {
   return TYPE_LABELS[t] || t
+}
+
+function suggestionsOf(t: AccountType) {
+  return ACCOUNT_SUGGESTIONS[t] || []
+}
+
+/** 点击推荐账户：填充名称，仍可在输入框中自定义修改 */
+function pickSuggestion(name: string) {
+  createForm.name = name
+}
+
+function changeType(t: AccountType) {
+  createForm.type = t
 }
 
 const groupedAccounts = computed(() =>
@@ -277,5 +309,20 @@ onMounted(async () => {
 .acc-balance {
   font-size: 16px;
   font-weight: 600;
+}
+.suggest-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.suggest-tag {
+  cursor: pointer;
+  margin-right: 0;
+}
+.suggest-hint {
+  width: 100%;
+  font-size: 12px;
+  color: #c0c4cc;
 }
 </style>

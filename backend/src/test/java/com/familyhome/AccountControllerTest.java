@@ -43,7 +43,7 @@ class AccountControllerTest extends ApiTestBase {
         String tk = token("13800000060");
         Long ledgerId = createLedger(tk, "私账", "personal");
         mockMvc.perform(postJson("/api/ledgers/" + ledgerId + "/accounts",
-                "{\"name\":\"工资卡\",\"type\":\"common\",\"initialBalance\":10000}")
+                "{\"name\":\"工资卡\",\"type\":\"asset\",\"initialBalance\":10000}")
                 .header("Authorization", "Bearer " + tk))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.name").value("工资卡"))
@@ -65,8 +65,8 @@ class AccountControllerTest extends ApiTestBase {
     void listAccounts_returnsAll() throws Exception {
         String tk = token("13800000062");
         Long ledgerId = createLedger(tk, "私账", "personal");
-        createAccount(tk, ledgerId, "微信", "common", "500");
-        createAccount(tk, ledgerId, "信用卡", "liability", "0");
+        createAccount(tk, ledgerId, "微信", "asset", "500");
+        createAccount(tk, ledgerId, "信用卡", "credit", "0");
         mockMvc.perform(get("/api/ledgers/" + ledgerId + "/accounts")
                 .header("Authorization", "Bearer " + tk))
             .andExpect(status().isOk())
@@ -77,7 +77,7 @@ class AccountControllerTest extends ApiTestBase {
     void adjustBalance_updatesBalanceAndLogs() throws Exception {
         String tk = token("13800000063");
         Long ledgerId = createLedger(tk, "私账", "personal");
-        Long a = createAccount(tk, ledgerId, "卡", "common", "1000");
+        Long a = createAccount(tk, ledgerId, "卡", "asset", "1000");
 
         mockMvc.perform(postJson("/api/accounts/" + a + "/balance",
                 "{\"newBalance\":888,\"reason\":\"现金清点\"}")
@@ -97,7 +97,7 @@ class AccountControllerTest extends ApiTestBase {
         String tk = token("13800000064");
         String other = token("13800000065");
         Long ledgerId = createLedger(tk, "私账", "personal");
-        Long a = createAccount(tk, ledgerId, "卡", "common", "100");
+        Long a = createAccount(tk, ledgerId, "卡", "asset", "100");
         mockMvc.perform(postJson("/api/accounts/" + a + "/balance", "{\"newBalance\":50}")
                 .header("Authorization", "Bearer " + other))
             .andExpect(status().isForbidden());
@@ -107,9 +107,9 @@ class AccountControllerTest extends ApiTestBase {
     void summary_calculatesAssetsLiabilityNet() throws Exception {
         String tk = token("13800000066");
         Long ledgerId = createLedger(tk, "私账", "personal");
-        createAccount(tk, ledgerId, "现金", "common", "1000");
-        createAccount(tk, ledgerId, "基金", "investment", "2000");
-        createAccount(tk, ledgerId, "信用卡", "liability", "300");
+        createAccount(tk, ledgerId, "现金", "asset", "1000");
+        createAccount(tk, ledgerId, "基金", "asset", "2000");
+        createAccount(tk, ledgerId, "信用卡", "credit", "300");
 
         mockMvc.perform(get("/api/ledgers/" + ledgerId + "/accounts/summary")
                 .header("Authorization", "Bearer " + tk))
@@ -124,7 +124,7 @@ class AccountControllerTest extends ApiTestBase {
     void billAndAdjust_coexist_onSameAccount() throws Exception {
         String tk = token("13800000067");
         Long ledgerId = createLedger(tk, "私账", "personal");
-        Long a = createAccount(tk, ledgerId, "卡", "common", "1000");
+        Long a = createAccount(tk, ledgerId, "卡", "asset", "1000");
         Long cat = objectMapper.readTree(mockMvc.perform(
                 get("/api/ledgers/" + ledgerId + "/categories").header("Authorization", "Bearer " + tk))
             .andReturn().getResponse().getContentAsString()).path("data").get(0).path("id").asLong();

@@ -25,6 +25,15 @@ export interface BillVO {
   updatedAt: string
 }
 
+/** 账单操作留痕 */
+export interface BillLogVO {
+  id: number
+  action: 'create' | 'update' | 'delete'
+  operatorName: string
+  summary: string
+  createdAt: string
+}
+
 export interface PageResult<T> {
   list: T[]
   total: number
@@ -67,7 +76,7 @@ export function deleteBill(id: number): Promise<void> {
   return http.delete(`/bills/${id}`)
 }
 
-export function billLogs(id: number): Promise<any[]> {
+export function billLogs(id: number): Promise<BillLogVO[]> {
   return http.get(`/bills/${id}/logs`)
 }
 
