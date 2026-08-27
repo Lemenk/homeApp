@@ -1,0 +1,49 @@
+package com.familyhome.service;
+
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.familyhome.common.BizException;
+import com.familyhome.entity.User;
+import com.familyhome.mapper.UserMapper;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+
+@Service
+public class UserService {
+
+    private final UserMapper userMapper;
+
+    public UserService(UserMapper userMapper) {
+        this.userMapper = userMapper;
+    }
+
+    public User getById(Long id) {
+        User user = userMapper.selectById(id);
+        if (user == null) {
+            throw BizException.notFound("用户不存在");
+        }
+        return user;
+    }
+
+    public User findByPhone(String phone) {
+        return userMapper.selectOne(Wrappers.<User>lambdaQuery().eq(User::getPhone, phone));
+    }
+
+    /**
+     * 手机号登录：已存在则返回，否则自动注册。
+     */
+    public User loginOrCreateByPhone(String phone) {
+        User user = findByPhone(phone);
+        if (user != null) {
+            return user;
+        }
+        user = new User();
+        user.setPhone(phone);
+        user.setNickname("用户" + phone.substring(phone.length() - 4));
+        user.setStatus(1);
+        user.setCreatedAt(LocalDateTime.now());
+        user.setUpdatedAt(LocalDateTime.now());
+        userMapper.insert(user);
+        return user;
+    }
+}

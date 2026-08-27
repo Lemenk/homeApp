@@ -1,0 +1,19 @@
+﻿1.SMS_OK
+2.LOGIN_OK user=ç¨æ·0001
+3.FAMILY_OK id=1 code=3JPV5UWK
+4.LEDGER_OK id=1 type=personal role=creator
+5.CATEGORIES_OK expense=1 income=10
+6.ACCOUNTS_OK 1,2,3
+7.EXPENSE_OK id=1 amount=300 accounts=2 remark=??????
+8.INCOME_OK id=2
+9.TRANSFER_OK id=3
+  BALANCE ???=10100.00
+  BALANCE ??=2100.00
+  BALANCE ???=0.00
+10.LIST_OK total=1
+11.LOGS_OK count=1
+  TREND 2026-08 exp=300.00 inc=500.00
+  CATSTAT é¤é¥® amount=300.00 pct=100.0
+12.BUDGET_OK usage=300.00 over=False
+13.SUMMARY assets=12200.00 liab=0.00 net=12200.00
+14.ME_OK ç¨æ·0001 13700000001
