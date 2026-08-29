@@ -133,6 +133,9 @@ public class BillService {
             Wrappers.<BillAccount>lambdaQuery().eq(BillAccount::getBillId, billId));
         applyBalanceReverse(oldItems);
 
+        // 保存变更前快照（必须在修改 old 之前，字段均为不可变类型）
+        Map<String, Object> beforeMap = billToMap(old, oldItems);
+
         // 更新账单
         old.setType(req.getType());
         old.setCategoryId("transfer".equals(req.getType()) ? null : req.getCategoryId());
@@ -151,7 +154,7 @@ public class BillService {
         applyBalance(req.getItems(), old.getLedgerId());
 
         auditLogService.record(old.getLedgerId(), billId, userId, "update",
-            describe("修改账单", old, req.getItems()));
+            describeUpdate(beforeMap, billToMap(old, req.getItems())));
         return toVO(old);
     }
 
@@ -187,7 +190,8 @@ public class BillService {
             w.ge(Bill::getBillDate, q.getStartDate().atStartOfDay());
         }
         if (q.getEndDate() != null) {
-            w.le(Bill::getBillDate, q.getEndDate().plusDays(1).atStartOfDay());
+            // 用 lt 而非 le：endDate+1天 00:00 是开区间上界，避免把次日凌晨整点的账单计入
+            w.lt(Bill::getBillDate, q.getEndDate().plusDays(1).atStartOfDay());
         }
         if (q.getKeyword() != null && !q.getKeyword().isBlank()) {
             List<Long> catIds = categoryMapper.selectList(
@@ -201,16 +205,21 @@ public class BillService {
                 }
             });
         }
+        int page = Math.max(1, q.getPage());
+        int size = Math.min(Math.max(1, q.getSize()), 100);
+
         if (q.getAccountId() != null) {
             List<Long> billIds = billAccountMapper.selectList(
                     Wrappers.<BillAccount>lambdaQuery().eq(BillAccount::getAccountId, q.getAccountId()))
                 .stream().map(BillAccount::getBillId).distinct().toList();
+            // 空 IN() 会生成非法 SQL 导致 500，直接返回空分页
+            if (billIds.isEmpty()) {
+                return new PageResult<>(List.of(), 0L, page, size);
+            }
             w.in(Bill::getId, billIds);
         }
         w.orderByDesc(Bill::getBillDate).orderByDesc(Bill::getId);
 
-        int page = Math.max(1, q.getPage());
-        int size = Math.min(Math.max(1, q.getSize()), 100);
         IPage<Bill> p = billMapper.selectPage(new Page<>(page, size), w);
         List<BillVO> vos = p.getRecords().stream().map(this::toVO).toList();
         return new PageResult<>(vos, p.getTotal(), page, size);
@@ -334,8 +343,8 @@ public class BillService {
             if ("credit".equals(acc.getType())) {
                 delta = delta.negate();
             }
-            acc.setBalance(acc.getBalance().add(delta));
-            accountMapper.updateById(acc);
+            // 原子更新 balance = balance + delta，避免并发读-改-写丢失更新
+            accountMapper.addBalance(acc.getId(), delta);
         }
     }
 
@@ -351,8 +360,8 @@ public class BillService {
             if ("credit".equals(acc.getType())) {
                 delta = delta.negate();
             }
-            acc.setBalance(acc.getBalance().add(delta));
-            accountMapper.updateById(acc);
+            // 原子更新，避免并发丢失
+            accountMapper.addBalance(acc.getId(), delta);
         }
     }
 
@@ -399,24 +408,44 @@ public class BillService {
         return vo;
     }
 
+    /** 把账单 + 账户明细转为可序列化的 Map（字段均为不可变类型，调用后修改原对象不影响此 Map） */
+    private Map<String, Object> billToMap(Bill bill, List<?> items) {
+        Map<String, Object> detail = new HashMap<>();
+        detail.put("type", bill.getType());
+        detail.put("amount", bill.getAmount());
+        detail.put("categoryId", bill.getCategoryId());
+        detail.put("memberId", bill.getMemberId());
+        detail.put("billDate", bill.getBillDate());
+        detail.put("remark", bill.getRemark());
+        List<Map<String, Object>> itemList = new ArrayList<>();
+        for (Object o : items) {
+            if (o instanceof BillAccountItem ba) {
+                itemList.add(Map.of("accountId", ba.getAccountId(), "direction", ba.getDirection(), "amount", ba.getAmount()));
+            } else if (o instanceof BillAccount ba) {
+                itemList.add(Map.of("accountId", ba.getAccountId(), "direction", ba.getDirection(), "amount", ba.getAmount()));
+            }
+        }
+        detail.put("accounts", itemList);
+        return detail;
+    }
+
     private String describe(String action, Bill bill, List<?> items) {
         try {
-            Map<String, Object> detail = new HashMap<>();
+            Map<String, Object> detail = billToMap(bill, items);
             detail.put("action", action);
-            detail.put("type", bill.getType());
-            detail.put("amount", bill.getAmount());
-            detail.put("memberId", bill.getMemberId());
-            detail.put("billDate", bill.getBillDate());
-            detail.put("remark", bill.getRemark());
-            List<Map<String, Object>> itemList = new ArrayList<>();
-            for (Object o : items) {
-                if (o instanceof BillAccountItem ba) {
-                    itemList.add(Map.of("accountId", ba.getAccountId(), "direction", ba.getDirection(), "amount", ba.getAmount()));
-                } else if (o instanceof BillAccount ba) {
-                    itemList.add(Map.of("accountId", ba.getAccountId(), "direction", ba.getDirection(), "amount", ba.getAmount()));
-                }
-            }
-            detail.put("accounts", itemList);
+            return objectMapper.writeValueAsString(detail);
+        } catch (Exception e) {
+            return "{}";
+        }
+    }
+
+    /** 编辑留痕：同时记录变更前与变更后 */
+    private String describeUpdate(Map<String, Object> before, Map<String, Object> after) {
+        try {
+            Map<String, Object> detail = new HashMap<>();
+            detail.put("action", "修改账单");
+            detail.put("before", before);
+            detail.put("after", after);
             return objectMapper.writeValueAsString(detail);
         } catch (Exception e) {
             return "{}";
@@ -444,6 +473,13 @@ public class BillService {
         }
         try {
             Map<String, Object> d = objectMapper.readValue(changeDetail, new TypeReference<Map<String, Object>>() { });
+            // 兼容 update 的 before/after 格式：摘要展示变更后的状态
+            Object afterObj = d.get("after");
+            if (afterObj instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> after = (Map<String, Object>) afterObj;
+                d = after;
+            }
             String type = d.get("type") == null ? "" : d.get("type").toString();
             String typeCn = switch (type) {
                 case "expense" -> "支出";

@@ -50,7 +50,7 @@ public class StatisticsService {
             .eq(Bill::getLedgerId, ledgerId)
             .in(Bill::getType, "expense", "income")
             .ge(Bill::getBillDate, s.atStartOfDay())
-            .le(Bill::getBillDate, e.plusDays(1).atStartOfDay()));
+            .lt(Bill::getBillDate, e.plusDays(1).atStartOfDay()));
 
         Map<String, BigDecimal[]> bucket = new LinkedHashMap<>();
         for (Bill b : bills) {
@@ -97,7 +97,7 @@ public class StatisticsService {
             .eq(Bill::getLedgerId, ledgerId)
             .eq(Bill::getType, type)
             .ge(Bill::getBillDate, s.atStartOfDay())
-            .le(Bill::getBillDate, e.plusDays(1).atStartOfDay()));
+            .lt(Bill::getBillDate, e.plusDays(1).atStartOfDay()));
 
         Map<Long, BigDecimal> byCat = new LinkedHashMap<>();
         for (Bill b : bills) {

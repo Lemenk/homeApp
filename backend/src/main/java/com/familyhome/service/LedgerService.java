@@ -4,14 +4,28 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.familyhome.common.BizException;
 import com.familyhome.dto.CreateLedgerRequest;
 import com.familyhome.dto.LedgerVO;
+import com.familyhome.entity.Account;
+import com.familyhome.entity.AuditLog;
+import com.familyhome.entity.Bill;
+import com.familyhome.entity.BillAccount;
+import com.familyhome.entity.BillTag;
+import com.familyhome.entity.Budget;
 import com.familyhome.entity.Category;
 import com.familyhome.entity.FamilyMember;
 import com.familyhome.entity.Ledger;
 import com.familyhome.entity.LedgerMember;
+import com.familyhome.entity.Tag;
+import com.familyhome.mapper.AccountMapper;
+import com.familyhome.mapper.AuditLogMapper;
+import com.familyhome.mapper.BillAccountMapper;
+import com.familyhome.mapper.BillMapper;
+import com.familyhome.mapper.BillTagMapper;
+import com.familyhome.mapper.BudgetMapper;
 import com.familyhome.mapper.CategoryMapper;
 import com.familyhome.mapper.FamilyMemberMapper;
 import com.familyhome.mapper.LedgerMapper;
 import com.familyhome.mapper.LedgerMemberMapper;
+import com.familyhome.mapper.TagMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,15 +49,32 @@ public class LedgerService {
     private final CategoryMapper categoryMapper;
     private final FamilyMemberMapper familyMemberMapper;
     private final FamilyService familyService;
+    private final BillMapper billMapper;
+    private final BillAccountMapper billAccountMapper;
+    private final BillTagMapper billTagMapper;
+    private final AccountMapper accountMapper;
+    private final BudgetMapper budgetMapper;
+    private final AuditLogMapper auditLogMapper;
+    private final TagMapper tagMapper;
 
     public LedgerService(LedgerMapper ledgerMapper, LedgerMemberMapper ledgerMemberMapper,
                          CategoryMapper categoryMapper, FamilyMemberMapper familyMemberMapper,
-                         FamilyService familyService) {
+                         FamilyService familyService, BillMapper billMapper,
+                         BillAccountMapper billAccountMapper, BillTagMapper billTagMapper,
+                         AccountMapper accountMapper, BudgetMapper budgetMapper,
+                         AuditLogMapper auditLogMapper, TagMapper tagMapper) {
         this.ledgerMapper = ledgerMapper;
         this.ledgerMemberMapper = ledgerMemberMapper;
         this.categoryMapper = categoryMapper;
         this.familyMemberMapper = familyMemberMapper;
         this.familyService = familyService;
+        this.billMapper = billMapper;
+        this.billAccountMapper = billAccountMapper;
+        this.billTagMapper = billTagMapper;
+        this.accountMapper = accountMapper;
+        this.budgetMapper = budgetMapper;
+        this.auditLogMapper = auditLogMapper;
+        this.tagMapper = tagMapper;
     }
 
     @Transactional
@@ -112,9 +143,28 @@ public class LedgerService {
         if (!ledger.getOwnerId().equals(userId)) {
             throw BizException.forbidden("仅账本创建者可删除账本");
         }
-        ledgerMapper.deleteById(ledgerId);
+
+        // 级联清理：先删子表关联，再删主表，避免孤儿数据
+        // 1. 账单账户明细 & 账单标签关联
+        billAccountMapper.delete(Wrappers.<BillAccount>lambdaQuery()
+            .inSql(BillAccount::getBillId, "SELECT id FROM t_bill WHERE ledger_id = " + ledgerId));
+        billTagMapper.delete(Wrappers.<BillTag>lambdaQuery()
+            .inSql(BillTag::getBillId, "SELECT id FROM t_bill WHERE ledger_id = " + ledgerId));
+        // 2. 账单
+        billMapper.delete(Wrappers.<Bill>lambdaQuery().eq(Bill::getLedgerId, ledgerId));
+        // 3. 账户
+        accountMapper.delete(Wrappers.<Account>lambdaQuery().eq(Account::getLedgerId, ledgerId));
+        // 4. 预算
+        budgetMapper.delete(Wrappers.<Budget>lambdaQuery().eq(Budget::getLedgerId, ledgerId));
+        // 5. 审计日志
+        auditLogMapper.delete(Wrappers.<AuditLog>lambdaQuery().eq(AuditLog::getLedgerId, ledgerId));
+        // 6. 分类 & 标签
+        categoryMapper.delete(Wrappers.<Category>lambdaQuery().eq(Category::getLedgerId, ledgerId));
+        tagMapper.delete(Wrappers.<Tag>lambdaQuery().eq(Tag::getLedgerId, ledgerId));
+        // 7. 账本成员 & 账本本身
         ledgerMemberMapper.delete(Wrappers.<LedgerMember>lambdaQuery()
             .eq(LedgerMember::getLedgerId, ledgerId));
+        ledgerMapper.deleteById(ledgerId);
     }
 
     public void requireMember(Long ledgerId, Long userId) {
