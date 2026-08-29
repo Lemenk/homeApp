@@ -21,5 +21,14 @@ public class CreateAccountRequest {
     @Size(max = 32)
     private String icon;
 
+    @Size(max = 32, message = "分组名称过长")
+    private String groupName;
+
+    @Size(max = 255, message = "备注过长")
+    private String remark;
+
+    /** 是否计入总资产，默认 1 */
+    private Integer includeInTotal;
+
     private BigDecimal initialBalance;
 }

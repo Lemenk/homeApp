@@ -76,6 +76,9 @@ CREATE TABLE IF NOT EXISTS t_account (
   icon VARCHAR(32),
   initial_balance DECIMAL(15,2) DEFAULT 0,
   balance DECIMAL(15,2) DEFAULT 0,
+  group_name VARCHAR(32),
+  remark VARCHAR(255),
+  include_in_total TINYINT DEFAULT 1,
   status TINYINT DEFAULT 1,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

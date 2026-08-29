@@ -10,6 +10,9 @@ export interface AccountVO {
   icon?: string
   initialBalance: number
   balance: number
+  groupName?: string
+  remark?: string
+  includeInTotal?: number
 }
 
 /** 账户类型 → 展示名 */
@@ -34,7 +37,15 @@ export function listAccounts(ledgerId: number): Promise<AccountVO[]> {
 
 export function createAccount(
   ledgerId: number,
-  data: { name: string; type: AccountType; initialBalance?: number }
+  data: {
+    name: string
+    type: AccountType
+    initialBalance?: number
+    icon?: string
+    groupName?: string
+    remark?: string
+    includeInTotal?: number
+  }
 ): Promise<AccountVO> {
   return http.post(`/ledgers/${ledgerId}/accounts`, data)
 }

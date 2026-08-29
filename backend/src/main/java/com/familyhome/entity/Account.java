@@ -19,6 +19,9 @@ public class Account {
     private String icon;
     private BigDecimal initialBalance;
     private BigDecimal balance;
+    private String groupName;
+    private String remark;
+    private Integer includeInTotal;
     private Integer status;
     private LocalDateTime createdAt;
 }

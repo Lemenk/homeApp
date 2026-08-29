@@ -40,6 +40,9 @@ public class AccountService {
         account.setName(req.getName());
         account.setType(req.getType());
         account.setIcon(req.getIcon());
+        account.setGroupName(req.getGroupName());
+        account.setRemark(req.getRemark());
+        account.setIncludeInTotal(req.getIncludeInTotal() == null ? 1 : req.getIncludeInTotal());
         account.setInitialBalance(req.getInitialBalance() == null ? BigDecimal.ZERO : req.getInitialBalance());
         account.setBalance(account.getInitialBalance());
         account.setStatus(1);
@@ -93,7 +96,7 @@ public class AccountService {
         for (Account a : accounts) {
             if ("credit".equals(a.getType())) {
                 totalLiability = totalLiability.add(a.getBalance());
-            } else {
+            } else if (a.getIncludeInTotal() == null || a.getIncludeInTotal() == 1) {
                 totalAssets = totalAssets.add(a.getBalance());
             }
         }
@@ -106,6 +109,7 @@ public class AccountService {
 
     private AccountVO toVO(Account a) {
         return new AccountVO(a.getId(), a.getLedgerId(), a.getType(), a.getName(),
-            a.getIcon(), a.getInitialBalance(), a.getBalance());
+            a.getIcon(), a.getInitialBalance(), a.getBalance(),
+            a.getGroupName(), a.getRemark(), a.getIncludeInTotal());
     }
 }
