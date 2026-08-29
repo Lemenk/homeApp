@@ -30,9 +30,26 @@
     <div v-else-if="step === 1">
       <div class="amount-row">
         <span class="currency">¥</span>
-        <el-input-number v-model="amount" :min="0.01" :precision="2" :controls="false" class="amount-input" />
+        <el-input-number
+          v-model="amount"
+          :min="0.01"
+          :precision="2"
+          :controls="false"
+          class="amount-input"
+          placeholder="输入金额"
+        />
       </div>
       <template v-if="type !== 'transfer'">
+        <!-- 金额已填但未选分类时给出明确引导，避免“下一步”点了没反应 -->
+        <el-alert
+          v-if="amount !== null && amount > 0 && !categoryId"
+          type="warning"
+          :closable="false"
+          show-icon
+          title="请选择分类后继续"
+          description="选择下方的支出/收入分类即可进入下一步"
+          style="margin-bottom: 8px"
+        />
         <div class="cat-grid">
           <div
             v-for="c in categories"
@@ -48,7 +65,11 @@
       </template>
       <div class="step-footer">
         <el-button @click="step = 0">上一步</el-button>
-        <el-button type="primary" :disabled="!amount || amount <= 0 || (type !== 'transfer' && !categoryId)" @click="step = 2">
+        <el-button
+          type="primary"
+          :disabled="!amount || amount <= 0"
+          @click="tryNext"
+        >
           下一步
         </el-button>
       </div>
@@ -203,6 +224,15 @@ function removeItem(key: number) {
   items.value = items.value.filter((it) => it.key !== key)
 }
 
+/** 第 2 步入口：金额有效即可点击；支出/收入未选分类时给出明确提示，避免按钮无反应 */
+function tryNext() {
+  if (type.value !== 'transfer' && !categoryId.value) {
+    ElMessage.warning('请先选择分类')
+    return
+  }
+  step.value = 2
+}
+
 async function loadData() {
   accounts.value = await listAccounts(props.ledgerId)
   categories.value = (await listCategories(props.ledgerId)).filter((c) => c.enabled !== 0)
@@ -302,7 +332,9 @@ watch(
         reset()
       }
     }
-  }
+  },
+  // immediate：避免组件以 modelValue=true 首次挂载（如刷新/重挂载）时分类/账户为空
+  { immediate: true }
 )
 
 onMounted(() => {
