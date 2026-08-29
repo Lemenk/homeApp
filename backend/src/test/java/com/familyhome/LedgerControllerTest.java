@@ -205,4 +205,73 @@ class LedgerControllerTest extends ApiTestBase {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.length()").value(0));
     }
+
+    private Long userIdOf(String tk) throws Exception {
+        return objectMapper.readTree(mockMvc.perform(
+                get("/api/auth/me").header("Authorization", "Bearer " + tk))
+            .andReturn().getResponse().getContentAsString()).path("data").path("id").asLong();
+    }
+
+    @Test
+    void addMember_publicLedger_ok_thenRemove() throws Exception {
+        String creatorTk = createFamilyFor("13800000033");
+        Long ledgerId = createLedgerId(creatorTk, "public", "家庭账本");
+        Long creatorId = userIdOf(creatorTk);
+
+        // 外部用户（非家庭成员）
+        String outsiderTk = token("13800000034");
+        Long outsiderId = userIdOf(outsiderTk);
+        // 添加前不可访问
+        mockMvc.perform(get("/api/ledgers/" + ledgerId).header("Authorization", "Bearer " + outsiderTk))
+            .andExpect(status().isForbidden());
+
+        // 创建者添加成员
+        mockMvc.perform(postJson("/api/ledgers/" + ledgerId + "/members", "{\"userId\":" + outsiderId + "}")
+                .header("Authorization", "Bearer " + creatorTk))
+            .andExpect(status().isOk());
+        mockMvc.perform(get("/api/ledgers/" + ledgerId).header("Authorization", "Bearer " + creatorTk))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.memberCount").value(2));
+        mockMvc.perform(get("/api/ledgers/" + ledgerId).header("Authorization", "Bearer " + outsiderTk))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.role").value("member"));
+
+        // 重复添加拒绝
+        mockMvc.perform(postJson("/api/ledgers/" + ledgerId + "/members", "{\"userId\":" + outsiderId + "}")
+                .header("Authorization", "Bearer " + creatorTk))
+            .andExpect(status().isBadRequest());
+
+        // 移除成员后不可再访问
+        mockMvc.perform(delete("/api/ledgers/" + ledgerId + "/members/" + outsiderId)
+                .header("Authorization", "Bearer " + creatorTk))
+            .andExpect(status().isOk());
+        mockMvc.perform(get("/api/ledgers/" + ledgerId).header("Authorization", "Bearer " + outsiderTk))
+            .andExpect(status().isForbidden());
+
+        // 不能移除创建者本人
+        mockMvc.perform(delete("/api/ledgers/" + ledgerId + "/members/" + creatorId)
+                .header("Authorization", "Bearer " + creatorTk))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void addMember_personalLedger_rejected() throws Exception {
+        String tk = token("13800000035");
+        Long ledgerId = createLedgerId(tk, "personal", "私账");
+        Long otherId = userIdOf(token("13800000036"));
+        mockMvc.perform(postJson("/api/ledgers/" + ledgerId + "/members", "{\"userId\":" + otherId + "}")
+                .header("Authorization", "Bearer " + tk))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void addMember_byNonMember_forbidden() throws Exception {
+        String creatorTk = createFamilyFor("13800000037");
+        Long ledgerId = createLedgerId(creatorTk, "public", "家庭账本");
+        Long outsiderId = userIdOf(token("13800000038"));
+        // 非账本成员/创建者无权添加
+        mockMvc.perform(postJson("/api/ledgers/" + ledgerId + "/members", "{\"userId\":" + outsiderId + "}")
+                .header("Authorization", "Bearer " + token("13800000039")))
+            .andExpect(status().isForbidden());
+    }
 }

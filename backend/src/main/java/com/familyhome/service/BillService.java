@@ -194,8 +194,11 @@ public class BillService {
             w.lt(Bill::getBillDate, q.getEndDate().plusDays(1).atStartOfDay());
         }
         if (q.getKeyword() != null && !q.getKeyword().isBlank()) {
+            // 仅匹配当前账本的分类名，避免跨账本匹配到相同 id
             List<Long> catIds = categoryMapper.selectList(
-                    Wrappers.<Category>lambdaQuery().like(Category::getName, q.getKeyword()))
+                    Wrappers.<Category>lambdaQuery()
+                        .eq(Category::getLedgerId, ledgerId)
+                        .like(Category::getName, q.getKeyword()))
                 .stream().map(Category::getId).toList();
             String kw = q.getKeyword();
             w.and(x -> {
@@ -281,20 +284,29 @@ public class BillService {
         } else if ("transfer".equals(type)) {
             BigDecimal sumOut = BigDecimal.ZERO;
             BigDecimal sumIn = BigDecimal.ZERO;
+            java.util.Set<Long> outAccounts = new java.util.HashSet<>();
+            java.util.Set<Long> inAccounts = new java.util.HashSet<>();
             for (BillAccountItem it : items) {
                 if (it.getAmount() == null || it.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
                     throw BizException.badRequest("账户金额必须大于 0");
                 }
                 if ("out".equals(it.getDirection())) {
                     sumOut = sumOut.add(it.getAmount());
+                    outAccounts.add(it.getAccountId());
                 } else if ("in".equals(it.getDirection())) {
                     sumIn = sumIn.add(it.getAmount());
+                    inAccounts.add(it.getAccountId());
                 } else {
                     throw BizException.badRequest("转账明细方向只能是 out 或 in");
                 }
             }
             if (sumOut.compareTo(amount) != 0 || sumIn.compareTo(amount) != 0) {
                 throw BizException.badRequest("转账转出与转入金额必须等于账单金额");
+            }
+            // 转出账户与转入账户不能重叠（同一账户不可既转出又转入，否则余额对冲 = 白记）
+            outAccounts.retainAll(inAccounts);
+            if (!outAccounts.isEmpty()) {
+                throw BizException.badRequest("转账的转出账户与转入账户不能是同一个账户");
             }
         } else {
             throw BizException.badRequest("账单类型不合法");

@@ -178,7 +178,8 @@ public class BudgetService {
             .eq(Bill::getType, "expense")
             .eq(Bill::getCategoryId, categoryId)
             .ge(Bill::getBillDate, start.atStartOfDay())
-            .le(Bill::getBillDate, end.plusDays(1).atStartOfDay()));
+            // 用 lt 而非 le：end+1天 00:00 是开区间上界，避免把次日凌晨整点的账单计入
+            .lt(Bill::getBillDate, end.plusDays(1).atStartOfDay()));
         BigDecimal sum = bills.stream()
             .map(Bill::getAmount)
             .reduce(BigDecimal.ZERO, BigDecimal::add);

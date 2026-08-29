@@ -70,11 +70,13 @@ class StatisticsControllerTest extends ApiTestBase {
         Long acc = createAccount(tk, ledgerId);
 
         String month = LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM"));
+        LocalDate start = LocalDate.now().withDayOfMonth(1);
+        LocalDate end = start.withDayOfMonth(start.lengthOfMonth());
         createBill(tk, ledgerId, "expense", exp, acc, "100", month + "-05T12:00:00");
         createBill(tk, ledgerId, "expense", exp, acc, "50", month + "-15T12:00:00");
         createBill(tk, ledgerId, "income", inc, acc, "500", month + "-10T12:00:00");
 
-        mockMvc.perform(get("/api/ledgers/" + ledgerId + "/statistics/trend")
+        mockMvc.perform(get("/api/ledgers/" + ledgerId + "/statistics/trend?startDate=" + start + "&endDate=" + end)
                 .header("Authorization", "Bearer " + tk))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.length()").value(1))
@@ -91,11 +93,78 @@ class StatisticsControllerTest extends ApiTestBase {
         Long acc = createAccount(tk, ledgerId);
         String day = LocalDate.now().toString();
         createBill(tk, ledgerId, "expense", exp, acc, "88", day + "T08:00:00");
-        mockMvc.perform(get("/api/ledgers/" + ledgerId + "/statistics/trend?groupBy=day")
+        mockMvc.perform(get("/api/ledgers/" + ledgerId + "/statistics/trend?groupBy=day&startDate=" + day + "&endDate=" + day)
                 .header("Authorization", "Bearer " + tk))
             .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.length()").value(1))
             .andExpect(jsonPath("$.data[0].period").value(day))
             .andExpect(jsonPath("$.data[0].expense").value(88));
+    }
+
+    @Test
+    void trend_byWeek_aggregatesWithinWeek() throws Exception {
+        String tk = token("13800000084");
+        Long ledgerId = createLedger(tk, "私账");
+        Long exp = categoryId(tk, ledgerId, "expense");
+        Long acc = createAccount(tk, ledgerId);
+        // 本周周一与周二各记一笔（同一周）
+        java.time.LocalDate monday = LocalDate.now()
+            .with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY));
+        java.time.LocalDate tuesday = monday.plusDays(1);
+        String mondayKey = monday.toString();
+        createBill(tk, ledgerId, "expense", exp, acc, "30", monday + "T09:00:00");
+        createBill(tk, ledgerId, "expense", exp, acc, "20", tuesday + "T09:00:00");
+
+        mockMvc.perform(get("/api/ledgers/" + ledgerId + "/statistics/trend?groupBy=week&startDate=" + monday + "&endDate=" + tuesday)
+                .header("Authorization", "Bearer " + tk))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.length()").value(1))
+            .andExpect(jsonPath("$.data[0].period").value(mondayKey))
+            .andExpect(jsonPath("$.data[0].expense").value(50));
+    }
+
+    @Test
+    void trend_byDay_zeroFilledForMissingDays() throws Exception {
+        String tk = token("13800000085");
+        Long ledgerId = createLedger(tk, "私账");
+        Long exp = categoryId(tk, ledgerId, "expense");
+        Long acc = createAccount(tk, ledgerId);
+        // 范围：昨天、今天、明天；仅在今天记一笔
+        LocalDate today = LocalDate.now();
+        LocalDate start = today.minusDays(1);
+        LocalDate end = today.plusDays(1);
+        createBill(tk, ledgerId, "expense", exp, acc, "60", today + "T08:00:00");
+
+        mockMvc.perform(get("/api/ledgers/" + ledgerId + "/statistics/trend?groupBy=day&startDate=" + start + "&endDate=" + end)
+                .header("Authorization", "Bearer " + tk))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.length()").value(3))
+            .andExpect(jsonPath("$.data[1].period").value(today.toString()))
+            .andExpect(jsonPath("$.data[1].expense").value(60))
+            .andExpect(jsonPath("$.data[0].expense").value(0))
+            .andExpect(jsonPath("$.data[2].expense").value(0))
+            .andExpect(jsonPath("$.data[0].income").value(0));
+    }
+
+    @Test
+    void trend_byMonth_zeroFilledAcrossMonths() throws Exception {
+        String tk = token("13800000086");
+        Long ledgerId = createLedger(tk, "私账");
+        Long exp = categoryId(tk, ledgerId, "expense");
+        Long acc = createAccount(tk, ledgerId);
+        // 上月与本月，仅本月记一笔
+        LocalDate firstOfLastMonth = LocalDate.now().minusMonths(1).withDayOfMonth(1);
+        LocalDate lastOfThisMonth = LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth());
+        String thisMonth = LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM"));
+        createBill(tk, ledgerId, "expense", exp, acc, "100", thisMonth + "-10T10:00:00");
+
+        mockMvc.perform(get("/api/ledgers/" + ledgerId + "/statistics/trend?startDate=" + firstOfLastMonth + "&endDate=" + lastOfThisMonth)
+                .header("Authorization", "Bearer " + tk))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.length()").value(2))
+            .andExpect(jsonPath("$.data[1].period").value(thisMonth))
+            .andExpect(jsonPath("$.data[1].expense").value(100))
+            .andExpect(jsonPath("$.data[0].expense").value(0));
     }
 
     @Test

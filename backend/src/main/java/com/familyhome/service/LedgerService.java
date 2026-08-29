@@ -15,6 +15,7 @@ import com.familyhome.entity.FamilyMember;
 import com.familyhome.entity.Ledger;
 import com.familyhome.entity.LedgerMember;
 import com.familyhome.entity.Tag;
+import com.familyhome.entity.User;
 import com.familyhome.mapper.AccountMapper;
 import com.familyhome.mapper.AuditLogMapper;
 import com.familyhome.mapper.BillAccountMapper;
@@ -26,6 +27,7 @@ import com.familyhome.mapper.FamilyMemberMapper;
 import com.familyhome.mapper.LedgerMapper;
 import com.familyhome.mapper.LedgerMemberMapper;
 import com.familyhome.mapper.TagMapper;
+import com.familyhome.mapper.UserMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -56,13 +58,14 @@ public class LedgerService {
     private final BudgetMapper budgetMapper;
     private final AuditLogMapper auditLogMapper;
     private final TagMapper tagMapper;
+    private final UserMapper userMapper;
 
     public LedgerService(LedgerMapper ledgerMapper, LedgerMemberMapper ledgerMemberMapper,
                          CategoryMapper categoryMapper, FamilyMemberMapper familyMemberMapper,
                          FamilyService familyService, BillMapper billMapper,
                          BillAccountMapper billAccountMapper, BillTagMapper billTagMapper,
                          AccountMapper accountMapper, BudgetMapper budgetMapper,
-                         AuditLogMapper auditLogMapper, TagMapper tagMapper) {
+                         AuditLogMapper auditLogMapper, TagMapper tagMapper, UserMapper userMapper) {
         this.ledgerMapper = ledgerMapper;
         this.ledgerMemberMapper = ledgerMemberMapper;
         this.categoryMapper = categoryMapper;
@@ -75,6 +78,7 @@ public class LedgerService {
         this.budgetMapper = budgetMapper;
         this.auditLogMapper = auditLogMapper;
         this.tagMapper = tagMapper;
+        this.userMapper = userMapper;
     }
 
     @Transactional
@@ -188,6 +192,50 @@ public class LedgerService {
         }
         if (!"creator".equals(lm.getRole())) {
             throw BizException.forbidden("仅账本创建者可执行此操作");
+        }
+    }
+
+    /** 账本创建者添加成员（仅公共账本；个人账本保持私有） */
+    @Transactional
+    public void addMember(Long operatorId, Long ledgerId, Long userId) {
+        Ledger ledger = ledgerMapper.selectById(ledgerId);
+        if (ledger == null) {
+            throw BizException.notFound("账本不存在");
+        }
+        requireCreator(ledgerId, operatorId);
+        if (!"public".equals(ledger.getType())) {
+            throw BizException.badRequest("仅公共账本支持添加成员");
+        }
+        if (userMapper.selectById(userId) == null) {
+            throw BizException.notFound("用户不存在");
+        }
+        Long exists = ledgerMemberMapper.selectCount(
+            Wrappers.<LedgerMember>lambdaQuery()
+                .eq(LedgerMember::getLedgerId, ledgerId)
+                .eq(LedgerMember::getUserId, userId));
+        if (exists != null && exists > 0) {
+            throw BizException.badRequest("该用户已是账本成员");
+        }
+        insertMember(ledgerId, userId, "member");
+    }
+
+    /** 账本创建者移除成员（不能移除创建者本人） */
+    @Transactional
+    public void removeMember(Long operatorId, Long ledgerId, Long userId) {
+        Ledger ledger = ledgerMapper.selectById(ledgerId);
+        if (ledger == null) {
+            throw BizException.notFound("账本不存在");
+        }
+        requireCreator(ledgerId, operatorId);
+        if (ledger.getOwnerId().equals(userId)) {
+            throw BizException.badRequest("不能移除账本创建者");
+        }
+        int removed = ledgerMemberMapper.delete(
+            Wrappers.<LedgerMember>lambdaQuery()
+                .eq(LedgerMember::getLedgerId, ledgerId)
+                .eq(LedgerMember::getUserId, userId));
+        if (removed == 0) {
+            throw BizException.notFound("该用户不是账本成员");
         }
     }
 

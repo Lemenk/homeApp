@@ -1,6 +1,7 @@
 package com.familyhome.controller;
 
 import com.familyhome.common.Result;
+import com.familyhome.dto.AddLedgerMemberRequest;
 import com.familyhome.dto.CreateLedgerRequest;
 import com.familyhome.dto.LedgerVO;
 import com.familyhome.security.UserContext;
@@ -44,6 +45,21 @@ public class LedgerController {
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
         ledgerService.deleteLedger(UserContext.require(), id);
+        return Result.ok();
+    }
+
+    /** 账本创建者添加成员（仅公共账本） */
+    @PostMapping("/{id}/members")
+    public Result<Void> addMember(@PathVariable Long id,
+                                  @Valid @RequestBody AddLedgerMemberRequest req) {
+        ledgerService.addMember(UserContext.require(), id, req.getUserId());
+        return Result.ok();
+    }
+
+    /** 账本创建者移除成员（不能移除创建者） */
+    @DeleteMapping("/{id}/members/{userId}")
+    public Result<Void> removeMember(@PathVariable Long id, @PathVariable Long userId) {
+        ledgerService.removeMember(UserContext.require(), id, userId);
         return Result.ok();
     }
 }

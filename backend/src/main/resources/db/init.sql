@@ -107,7 +107,8 @@ CREATE TABLE IF NOT EXISTS t_bill_account (
   direction VARCHAR(8) NOT NULL COMMENT 'out/in',
   amount DECIMAL(15,2) NOT NULL,
   pair_id BIGINT COMMENT '转账配对',
-  KEY idx_bill (bill_id)
+  KEY idx_bill (bill_id),
+  KEY idx_account (account_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='账单-账户明细';
 
 CREATE TABLE IF NOT EXISTS t_bill_tag (

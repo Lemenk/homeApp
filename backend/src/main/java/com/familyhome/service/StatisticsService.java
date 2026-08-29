@@ -34,7 +34,8 @@ public class StatisticsService {
     }
 
     /**
-     * 收支趋势：按 日/月 聚合指定范围内的收入与支出（不含转账）。
+     * 收支趋势：按 日/周/月 聚合指定范围内的收入与支出（不含转账）。
+     * 生成从 start 到 end 的完整周期序列，无账单的周期补零，保证折线图连续。
      */
     public List<Map<String, Object>> trend(Long userId, Long ledgerId, LocalDate start, LocalDate end,
                                            String groupBy) {
@@ -44,7 +45,11 @@ public class StatisticsService {
         if (s.isAfter(e)) {
             throw BizException.badRequest("开始日期不能晚于结束日期");
         }
-        String granularity = "day".equals(groupBy) ? "day" : "month";
+        String granularity = switch (groupBy == null ? "" : groupBy) {
+            case "day" -> "day";
+            case "week" -> "week";
+            default -> "month";
+        };
 
         List<Bill> bills = billMapper.selectList(Wrappers.<Bill>lambdaQuery()
             .eq(Bill::getLedgerId, ledgerId)
@@ -52,11 +57,18 @@ public class StatisticsService {
             .ge(Bill::getBillDate, s.atStartOfDay())
             .lt(Bill::getBillDate, e.plusDays(1).atStartOfDay()));
 
+        // 先构建完整周期序列（零填充），LinkedHashMap 保序，天然按时间升序
         Map<String, BigDecimal[]> bucket = new LinkedHashMap<>();
+        fillEmptyPeriods(bucket, granularity, s, e);
+
+        DateTimeFormatter monthFmt = DateTimeFormatter.ofPattern("yyyy-MM");
         for (Bill b : bills) {
-            String key = "day".equals(granularity)
-                ? b.getBillDate().toLocalDate().format(DateTimeFormatter.ISO_LOCAL_DATE)
-                : b.getBillDate().toLocalDate().format(DateTimeFormatter.ofPattern("yyyy-MM"));
+            LocalDate day = b.getBillDate().toLocalDate();
+            String key = switch (granularity) {
+                case "day" -> day.format(DateTimeFormatter.ISO_LOCAL_DATE);
+                case "week" -> mondayOf(day).format(DateTimeFormatter.ISO_LOCAL_DATE);
+                default -> day.format(monthFmt);
+            };
             BigDecimal[] row = bucket.computeIfAbsent(key, k -> new BigDecimal[]{
                 BigDecimal.ZERO, BigDecimal.ZERO});
             if ("income".equals(b.getType())) {
@@ -74,8 +86,35 @@ public class StatisticsService {
             m.put("income", entry.getValue()[1]);
             result.add(m);
         }
-        result.sort((a, b) -> ((String) a.get("period")).compareTo((String) b.get("period")));
         return result;
+    }
+
+    /** 该日期所在周的周一（ISO-8601，周一为一周开始） */
+    private LocalDate mondayOf(LocalDate day) {
+        return day.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY));
+    }
+
+    /** 生成从 start 到 end 的完整周期序列，每个周期默认 0 值 */
+    private void fillEmptyPeriods(Map<String, BigDecimal[]> bucket, String granularity,
+                                  LocalDate s, LocalDate e) {
+        if ("day".equals(granularity)) {
+            for (LocalDate d = s; !d.isAfter(e); d = d.plusDays(1)) {
+                bucket.put(d.format(DateTimeFormatter.ISO_LOCAL_DATE),
+                    new BigDecimal[]{BigDecimal.ZERO, BigDecimal.ZERO});
+            }
+        } else if ("week".equals(granularity)) {
+            for (LocalDate d = mondayOf(s); !d.isAfter(e); d = d.plusWeeks(1)) {
+                bucket.put(d.format(DateTimeFormatter.ISO_LOCAL_DATE),
+                    new BigDecimal[]{BigDecimal.ZERO, BigDecimal.ZERO});
+            }
+        } else {
+            java.time.YearMonth ym = java.time.YearMonth.from(s);
+            java.time.YearMonth endYm = java.time.YearMonth.from(e);
+            DateTimeFormatter monthFmt = DateTimeFormatter.ofPattern("yyyy-MM");
+            for (java.time.YearMonth m = ym; !m.isAfter(endYm); m = m.plusMonths(1)) {
+                bucket.put(m.format(monthFmt), new BigDecimal[]{BigDecimal.ZERO, BigDecimal.ZERO});
+            }
+        }
     }
 
     /**

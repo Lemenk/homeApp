@@ -132,6 +132,26 @@ class BudgetControllerTest extends ApiTestBase {
     }
 
     @Test
+    void customPeriodBudget_doesNotCountNextDayMidnight() throws Exception {
+        String tk = token("13800000076");
+        Long ledgerId = createLedger(tk, "私账");
+        Long cat = categoryId(tk, ledgerId, "expense");
+        Long acc = createAccount(tk, ledgerId);
+        LocalDate start = LocalDate.now().withDayOfMonth(1);
+        LocalDate end = LocalDate.now().withDayOfMonth(start.lengthOfMonth());
+        // 下月 1 日 00:00:00 整点的账单：属于开区间上界，不应计入本月预算
+        LocalDateTime nextMonthMidnight = end.plusDays(1).atStartOfDay();
+        createExpense(tk, ledgerId, cat, acc, "100",
+            nextMonthMidnight.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")));
+
+        mockMvc.perform(postJson("/api/ledgers/" + ledgerId + "/budgets",
+                "{\"categoryId\":" + cat + ",\"periodType\":\"custom\",\"startDate\":\"" + start + "\",\"endDate\":\"" + end + "\",\"amount\":200}")
+                .header("Authorization", "Bearer " + tk))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.usage").value(0));
+    }
+
+    @Test
     void updateAndDeleteBudget() throws Exception {
         String tk = token("13800000073");
         Long ledgerId = createLedger(tk, "私账");

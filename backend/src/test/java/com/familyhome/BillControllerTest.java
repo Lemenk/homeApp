@@ -143,6 +143,55 @@ class BillControllerTest extends ApiTestBase {
     }
 
     @Test
+    void createTransfer_sameAccountOutAndIn_rejected() throws Exception {
+        String tk = token("13800000047");
+        Long ledgerId = createPersonalLedger(tk, "私账");
+        Long a = createAccount(tk, ledgerId, "卡A", "asset", "1000");
+
+        // 同一账户同时作为转出与转入：余额对冲 = 白记，应被拒绝
+        mockMvc.perform(postJson("/api/ledgers/" + ledgerId + "/bills",
+                "{\"type\":\"transfer\",\"amount\":200," +
+                "\"items\":[{\"accountId\":" + a + ",\"direction\":\"out\",\"amount\":200}," +
+                "{\"accountId\":" + a + ",\"direction\":\"in\",\"amount\":200}]}")
+                .header("Authorization", "Bearer " + tk))
+            .andExpect(status().isBadRequest());
+
+        // 余额不应变化
+        JsonNode accounts = getAccounts(tk, ledgerId);
+        org.junit.jupiter.api.Assertions.assertEquals(0, balanceOf(accounts, a).compareTo(new java.math.BigDecimal("1000")));
+    }
+
+    @Test
+    void keywordSearch_onlyMatchesCurrentLedger() throws Exception {
+        String tk = token("13800000048");
+        Long ledgerA = createPersonalLedger(tk, "账本A");
+        Long ledgerB = createPersonalLedger(tk, "账本B");
+        Long accA = createAccount(tk, ledgerA, "卡", "asset", "100");
+        Long accB = createAccount(tk, ledgerB, "卡", "asset", "100");
+        Long catA = firstExpenseCategory(tk, ledgerA); // 默认首个支出分类为"餐饮"
+        Long catB = firstExpenseCategory(tk, ledgerB);
+
+        // 两个账本各记一笔，remark 不含关键字，仅靠分类名匹配
+        JsonNode billA = objectMapper.readTree(mockMvc.perform(postJson("/api/ledgers/" + ledgerA + "/bills",
+                "{\"type\":\"expense\",\"categoryId\":" + catA + ",\"amount\":10," +
+                "\"items\":[{\"accountId\":" + accA + ",\"direction\":\"out\",\"amount\":10}]}")
+                .header("Authorization", "Bearer " + tk))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString()).path("data");
+        objectMapper.readTree(mockMvc.perform(postJson("/api/ledgers/" + ledgerB + "/bills",
+                "{\"type\":\"expense\",\"categoryId\":" + catB + ",\"amount\":20," +
+                "\"items\":[{\"accountId\":" + accB + ",\"direction\":\"out\",\"amount\":20}]}")
+                .header("Authorization", "Bearer " + tk))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+
+        // 在账本 A 搜索"餐饮"：只应命中账本 A 的账单，不含账本 B 的同名分类账单
+        mockMvc.perform(get("/api/ledgers/" + ledgerA + "/bills?keyword=" + "餐饮")
+                .header("Authorization", "Bearer " + tk))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.list.length()").value(1))
+            .andExpect(jsonPath("$.data.list[0].id").value(billA.path("id").asLong()));
+    }
+
+    @Test
     void personalLedger_recordForOther_rejected() throws Exception {
         String tk = token("13800000044");
         String otherTk = token("13800000045");

@@ -22,7 +22,12 @@ public class JwtUtil {
 
     public JwtUtil(@Value("${app.jwt.secret}") String secret,
                    @Value("${app.jwt.expire-hours}") long expireHours) {
-        this.key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secret));
+        byte[] keyBytes = Decoders.BASE64.decode(secret);
+        if (keyBytes.length < 32) {
+            throw new IllegalStateException(
+                "app.jwt.secret 解码后长度必须 ≥ 32 字节（256 位），当前 " + keyBytes.length + " 字节，请配置更强的密钥");
+        }
+        this.key = Keys.hmacShaKeyFor(keyBytes);
         this.expireMillis = expireHours * 3600_000L;
     }
 

@@ -100,7 +100,9 @@ CREATE TABLE IF NOT EXISTS t_bill_account (
   account_id BIGINT NOT NULL,
   direction VARCHAR(8) NOT NULL,
   amount DECIMAL(15,2) NOT NULL,
-  pair_id BIGINT
+  pair_id BIGINT,
+  INDEX idx_bill (bill_id),
+  INDEX idx_account (account_id)
 );
 
 CREATE TABLE IF NOT EXISTS t_bill_tag (
