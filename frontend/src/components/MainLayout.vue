@@ -1,62 +1,74 @@
 <template>
-  <el-container class="layout">
-    <el-aside width="200px" class="aside">
-      <div class="logo">家庭记账</div>
-      <el-menu :default-active="$route.path" router>
-        <el-menu-item index="/">首页</el-menu-item>
-        <el-menu-item index="/ledgers">账本</el-menu-item>
-        <el-menu-item index="/accounts">账户</el-menu-item>
-        <el-menu-item index="/budgets">预算</el-menu-item>
-        <el-menu-item index="/statistics">统计</el-menu-item>
-        <el-menu-item index="/settings">设置</el-menu-item>
-      </el-menu>
-    </el-aside>
-    <el-container>
-      <el-header class="header">
-        <div class="left">
-          <el-select
-            v-if="ledgerStore.ledgers.length"
-            v-model="currentId"
-            style="width: 200px"
-            @change="onSwitch"
-          >
-            <el-option
-              v-for="l in ledgerStore.ledgers"
-              :key="l.id"
-              :label="`${l.name}（${l.type === 'public' ? '公共' : '个人'}）`"
-              :value="l.id"
-            />
-          </el-select>
-          <span v-else class="no-ledger" @click="$router.push('/ledgers')">还没有账本，去创建</span>
-        </div>
-        <div class="right">
-          <el-button type="primary" round @click="goRecord">＋ 记账</el-button>
-          <el-dropdown @command="onUserCommand">
-            <span class="user">
-              {{ userStore.user?.nickname || userStore.user?.phone }}
-              <el-icon><arrow-down /></el-icon>
-            </span>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item command="family">家庭</el-dropdown-item>
-                <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
-        </div>
-      </el-header>
-      <el-main class="main">
-        <router-view />
-      </el-main>
-    </el-container>
-  </el-container>
-  <FamilySetupDialog v-model="familyStore.setupVisible" />
+  <div class="layout">
+    <!-- 左侧窄侧边栏：纯图标菜单 -->
+    <aside class="sidebar">
+      <!-- 顶部：首页、统计 -->
+      <div class="nav-top">
+        <el-tooltip content="首页" placement="right" :show-after="300">
+          <router-link to="/" class="nav-item" :class="{ active: $route.path === '/' }">
+            <el-icon :size="22"><House /></el-icon>
+          </router-link>
+        </el-tooltip>
+        <el-tooltip content="统计" placement="right" :show-after="300">
+          <router-link to="/statistics" class="nav-item" :class="{ active: $route.path === '/statistics' }">
+            <el-icon :size="22"><DataAnalysis /></el-icon>
+          </router-link>
+        </el-tooltip>
+      </div>
+
+      <!-- 底部：数据刷新、配置、个人信息 -->
+      <div class="nav-bottom">
+        <el-tooltip content="数据刷新" placement="right" :show-after="300">
+          <router-link to="/refresh" class="nav-item" :class="{ active: $route.path === '/refresh' }">
+            <el-icon :size="22"><RefreshRight /></el-icon>
+          </router-link>
+        </el-tooltip>
+        <el-tooltip content="配置" placement="right" :show-after="300">
+          <router-link to="/config" class="nav-item" :class="{ active: $route.path === '/config' }">
+            <el-icon :size="22"><Setting /></el-icon>
+          </router-link>
+        </el-tooltip>
+
+        <!-- 个人信息：点击向上弹出选择框 -->
+        <el-popover placement="top" :width="150" trigger="click" popper-class="user-popover">
+          <div class="user-menu-popup-inner">
+            <div class="user-menu-item" @click="onUserCommand('account')">
+              <el-icon><User /></el-icon>账户信息
+            </div>
+            <div class="user-menu-item" @click="onUserCommand('family')">
+              <el-icon><Avatar /></el-icon>家庭信息
+            </div>
+            <div class="user-menu-divider"></div>
+            <div class="user-menu-item logout" @click="onUserCommand('logout')">
+              <el-icon><SwitchButton /></el-icon>退出登录
+            </div>
+          </div>
+          <template #reference>
+            <div class="nav-item user-btn">
+              <el-avatar :size="28" class="user-avatar">
+                {{ avatarText }}
+              </el-avatar>
+            </div>
+          </template>
+        </el-popover>
+      </div>
+    </aside>
+
+    <!-- 右侧数据展示区 -->
+    <main class="content">
+      <router-view />
+    </main>
+
+    <FamilySetupDialog v-model="familyStore.setupVisible" />
+  </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ArrowDown } from '@element-plus/icons-vue'
+import {
+  House, DataAnalysis, RefreshRight, Setting, User, Avatar, SwitchButton,
+} from '@element-plus/icons-vue'
 import { useLedgerStore } from '@/stores/ledger'
 import { useUserStore } from '@/stores/user'
 import { useFamilyStore } from '@/stores/family'
@@ -67,26 +79,15 @@ const ledgerStore = useLedgerStore()
 const userStore = useUserStore()
 const familyStore = useFamilyStore()
 
-const currentId = computed({
-  get: () => ledgerStore.currentLedgerId,
-  set: (v: number) => ledgerStore.switchTo(v),
+const avatarText = computed(() => {
+  const name = userStore.user?.nickname || userStore.user?.phone || 'U'
+  return name.slice(0, 1).toUpperCase()
 })
 
-function onSwitch(v: number) {
-  ledgerStore.switchTo(v)
-}
-
-function goRecord() {
-  const id = ledgerStore.currentLedgerId
-  if (id) {
-    router.push(`/ledgers/${id}`)
-  } else {
-    router.push('/ledgers')
-  }
-}
-
 function onUserCommand(cmd: string) {
-  if (cmd === 'family') {
+  if (cmd === 'account') {
+    router.push('/settings')
+  } else if (cmd === 'family') {
     if (familyStore.family) {
       router.push('/family')
     } else {
@@ -103,48 +104,114 @@ onMounted(async () => {
     await userStore.fetchMe()
   }
   await ledgerStore.fetch()
+  await familyStore.fetch().catch(() => {})
 })
 </script>
 
 <style scoped>
 .layout {
+  display: flex;
   height: 100%;
+  width: 100%;
 }
-.aside {
+
+/* 左侧窄侧边栏 */
+.sidebar {
+  width: 64px;
+  flex-shrink: 0;
   background: #fff;
   border-right: 1px solid #ebeef5;
-}
-.logo {
-  font-size: 18px;
-  font-weight: 600;
-  padding: 18px 20px;
-  color: #409eff;
-}
-.header {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   justify-content: space-between;
-  background: #fff;
-  border-bottom: 1px solid #ebeef5;
+  align-items: center;
+  padding: 16px 0;
 }
-.left,
-.right {
+
+.nav-top,
+.nav-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-item {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
-  gap: 12px;
-}
-.user {
+  justify-content: center;
+  color: #606266;
+  text-decoration: none;
+  transition: all 0.2s;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 4px;
 }
-.no-ledger {
+
+.nav-item:hover {
+  background: #f0f2f5;
   color: #409eff;
-  cursor: pointer;
-  font-size: 14px;
 }
-.main {
+
+.nav-item.active {
+  background: #ecf5ff;
+  color: #409eff;
+}
+
+.user-btn {
+  padding: 0;
+}
+
+.user-avatar {
+  background: linear-gradient(135deg, #409eff, #66b1ff);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* 右侧内容区 */
+.content {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
   background: #f5f7fa;
+}
+</style>
+
+<style>
+/* 个人信息弹出菜单 */
+.user-popover {
+  padding: 6px !important;
+}
+.user-popover .user-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #303133;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+.user-popover .user-menu-item:hover {
+  background: #f5f7fa;
+}
+.user-popover .user-menu-item .el-icon {
+  font-size: 15px;
+  color: #606266;
+}
+.user-popover .user-menu-item.logout {
+  color: #f56c6c;
+}
+.user-popover .user-menu-item.logout .el-icon {
+  color: #f56c6c;
+}
+.user-popover .user-menu-divider {
+  height: 1px;
+  background: #ebeef5;
+  margin: 4px 0;
 }
 </style>
