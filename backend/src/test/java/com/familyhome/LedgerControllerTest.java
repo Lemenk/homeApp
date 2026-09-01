@@ -104,11 +104,12 @@ class LedgerControllerTest extends ApiTestBase {
     @Test
     void listLedgers_returnsMine() throws Exception {
         String tk = token("13800000024");
+        // 注册后自动创建默认账本"个人账本"，加上手动创建的 2 个，共 3 个
         createLedgerId(tk, "personal", "私账A");
         createLedgerId(tk, "personal", "私账B");
         mockMvc.perform(get("/api/ledgers").header("Authorization", "Bearer " + tk))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.length()").value(2));
+            .andExpect(jsonPath("$.data.length()").value(3));
     }
 
     @Test
@@ -200,10 +201,12 @@ class LedgerControllerTest extends ApiTestBase {
         // 创建者删除
         mockMvc.perform(delete("/api/ledgers/" + ledgerId).header("Authorization", "Bearer " + tk))
             .andExpect(status().isOk());
-        // 列表不再包含
+        // 列表仅剩注册自动创建的默认账本"个人账本"
         mockMvc.perform(get("/api/ledgers").header("Authorization", "Bearer " + tk))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.length()").value(0));
+            .andExpect(jsonPath("$.data.length()").value(1))
+            .andExpect(jsonPath("$.data[0].name").value("个人账本"))
+            .andExpect(jsonPath("$.data[0].isDefault").value(1));
     }
 
     private Long userIdOf(String tk) throws Exception {
@@ -272,6 +275,105 @@ class LedgerControllerTest extends ApiTestBase {
         // 非账本成员/创建者无权添加
         mockMvc.perform(postJson("/api/ledgers/" + ledgerId + "/members", "{\"userId\":" + outsiderId + "}")
                 .header("Authorization", "Bearer " + token("13800000039")))
+            .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void newUserRegister_autoCreatesDefaultLedger() throws Exception {
+        // 新用户注册后，系统自动创建一个类型为个人账本、名称为"个人账本"的默认账本
+        String tk = token("13800000050");
+        mockMvc.perform(get("/api/ledgers").header("Authorization", "Bearer " + tk))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.length()").value(1))
+            .andExpect(jsonPath("$.data[0].name").value("个人账本"))
+            .andExpect(jsonPath("$.data[0].type").value("personal"))
+            .andExpect(jsonPath("$.data[0].isDefault").value(1))
+            .andExpect(jsonPath("$.data[0].role").value("creator"));
+    }
+
+    @Test
+    void manuallyCreatedLedger_isNotDefault() throws Exception {
+        String tk = token("13800000051");
+        // 注册自动创建默认账本
+        mockMvc.perform(get("/api/ledgers").header("Authorization", "Bearer " + tk))
+            .andExpect(jsonPath("$.data[0].isDefault").value(1));
+        // 手动创建的账本非默认
+        JsonNode node = objectMapper.readTree(mockMvc.perform(
+                postJson("/api/ledgers", "{\"name\":\"我的私账\",\"type\":\"personal\"}")
+                    .header("Authorization", "Bearer " + tk))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+        org.junit.jupiter.api.Assertions.assertEquals(0, node.path("data").path("isDefault").asInt());
+        // 列表仍只有一个默认账本
+        mockMvc.perform(get("/api/ledgers").header("Authorization", "Bearer " + tk))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.length()").value(2));
+        String body = mockMvc.perform(get("/api/ledgers").header("Authorization", "Bearer " + tk))
+            .andReturn().getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+        long defaultCount = 0;
+        for (JsonNode l : objectMapper.readTree(body).path("data")) {
+            if (l.path("isDefault").asInt() == 1) defaultCount++;
+        }
+        org.junit.jupiter.api.Assertions.assertEquals(1, defaultCount, "仅有一个默认账本");
+    }
+
+    @Test
+    void switchDefaultLedger_whenMultiple() throws Exception {
+        String tk = token("13800000052");
+        Long ledgerA = createLedgerId(tk, "personal", "账本A");
+        Long ledgerB = createLedgerId(tk, "personal", "账本B");
+        // 初始默认账本是注册自动创建的"个人账本"
+        String body = mockMvc.perform(get("/api/ledgers").header("Authorization", "Bearer " + tk))
+            .andReturn().getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+        long defaultCount = 0;
+        for (JsonNode l : objectMapper.readTree(body).path("data")) {
+            if (l.path("isDefault").asInt() == 1) defaultCount++;
+        }
+        org.junit.jupiter.api.Assertions.assertEquals(1, defaultCount);
+
+        // 切换默认账本到账本A
+        mockMvc.perform(put("/api/ledgers/" + ledgerA + "/default")
+                .header("Authorization", "Bearer " + tk))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.id").value(ledgerA))
+            .andExpect(jsonPath("$.data.isDefault").value(1));
+
+        // 列表只有账本A为默认，且默认数量仍为1
+        String body2 = mockMvc.perform(get("/api/ledgers").header("Authorization", "Bearer " + tk))
+            .andReturn().getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+        long defaultCount2 = 0;
+        long defaultId = -1;
+        for (JsonNode l : objectMapper.readTree(body2).path("data")) {
+            if (l.path("isDefault").asInt() == 1) {
+                defaultCount2++;
+                defaultId = l.path("id").asLong();
+            }
+        }
+        org.junit.jupiter.api.Assertions.assertEquals(1, defaultCount2);
+        org.junit.jupiter.api.Assertions.assertEquals(ledgerA, defaultId);
+
+        // 再切到账本B，账本A不再是默认
+        mockMvc.perform(put("/api/ledgers/" + ledgerB + "/default")
+                .header("Authorization", "Bearer " + tk))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.id").value(ledgerB))
+            .andExpect(jsonPath("$.data.isDefault").value(1));
+        String body3 = mockMvc.perform(get("/api/ledgers").header("Authorization", "Bearer " + tk))
+            .andReturn().getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+        for (JsonNode l : objectMapper.readTree(body3).path("data")) {
+            if (l.path("id").asLong() == ledgerA) {
+                org.junit.jupiter.api.Assertions.assertEquals(0, l.path("isDefault").asInt(),
+                    "切走后账本A不再是默认");
+            }
+        }
+    }
+
+    @Test
+    void switchDefaultLedger_nonMember_forbidden() throws Exception {
+        String tk = token("13800000053");
+        Long ledgerId = createLedgerId(tk, "personal", "我的账本");
+        String strangerTk = token("13800000054");
+        mockMvc.perform(put("/api/ledgers/" + ledgerId + "/default")
+                .header("Authorization", "Bearer " + strangerTk))
             .andExpect(status().isForbidden());
     }
 }

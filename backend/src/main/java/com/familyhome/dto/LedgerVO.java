@@ -18,4 +18,6 @@ public class LedgerVO {
     /** 当前用户在账本中的角色 */
     private String role;
     private Long memberCount;
+    /** 是否为默认账本：1=默认，0=非默认 */
+    private Integer isDefault;
 }

@@ -13,11 +13,14 @@ public class AuthService {
     private final UserService userService;
     private final SmsCodeService smsCodeService;
     private final JwtUtil jwtUtil;
+    private final LedgerService ledgerService;
 
-    public AuthService(UserService userService, SmsCodeService smsCodeService, JwtUtil jwtUtil) {
+    public AuthService(UserService userService, SmsCodeService smsCodeService,
+                       JwtUtil jwtUtil, LedgerService ledgerService) {
         this.userService = userService;
         this.smsCodeService = smsCodeService;
         this.jwtUtil = jwtUtil;
+        this.ledgerService = ledgerService;
     }
 
     public void sendCode(String phone) {
@@ -28,7 +31,13 @@ public class AuthService {
         if (!smsCodeService.verifyCode(phone, code)) {
             throw BizException.badRequest("验证码错误或已过期");
         }
-        User user = userService.loginOrCreateByPhone(phone);
+        User user = userService.findByPhone(phone);
+        boolean isNewUser = (user == null);
+        if (isNewUser) {
+            // 新用户注册：创建账号，并自动创建一个"个人账本"作为默认账本
+            user = userService.createUser(phone);
+            ledgerService.createDefaultLedgerForNewUser(user.getId());
+        }
         String token = jwtUtil.generateToken(user.getId());
         return new LoginResponse(token, UserVO.from(user));
     }

@@ -45,8 +45,7 @@ public class SecurityConfig {
                     .requestMatchers("/api/auth/**").permitAll();
                 if (devToolsEnabled) {
                     // 仅开发/测试环境开放调试工具；生产由 app.security.dev-tools-enabled=false 关闭
-                    auth.requestMatchers("/h2-console/**").permitAll()
-                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll();
+                    auth.requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll();
                 }
                 auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                     .anyRequest().authenticated();

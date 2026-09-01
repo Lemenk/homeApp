@@ -19,5 +19,7 @@ public class Ledger {
     private Long ownerId;
     private Long familyId;
     private Integer status;
+    /** 是否为默认账本：1=默认，0=非默认 */
+    private Integer isDefault;
     private LocalDateTime createdAt;
 }

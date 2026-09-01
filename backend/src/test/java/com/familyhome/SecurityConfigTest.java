@@ -46,7 +46,7 @@ class SecurityConfigTest {
         assertTrue(cc.getAllowedOrigins().isEmpty(), "空白名单不应放行任何来源");
     }
 
-    // ---------- Swagger/H2 生产隔离（集成测试） ----------
+    // ---------- Swagger 生产隔离（集成测试） ----------
 
     @SpringBootTest
     @AutoConfigureMockMvc
@@ -62,11 +62,6 @@ class SecurityConfigTest {
         void swagger_blocked_whenDevToolsDisabled() throws Exception {
             mockMvc.perform(get("/swagger-ui.html")).andExpect(status().is4xxClientError());
             mockMvc.perform(get("/v3/api-docs")).andExpect(status().is4xxClientError());
-        }
-
-        @Test
-        void h2Console_blocked_whenDevToolsDisabled() throws Exception {
-            mockMvc.perform(get("/h2-console")).andExpect(status().is4xxClientError());
         }
 
         @Test

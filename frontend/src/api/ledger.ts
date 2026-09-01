@@ -38,6 +38,10 @@ export function deleteLedger(id: number): Promise<void> {
   return http.delete(`/ledgers/${id}`)
 }
 
+export function setDefaultLedger(id: number): Promise<LedgerVO> {
+  return http.put(`/ledgers/${id}/default`)
+}
+
 export function listCategories(ledgerId: number): Promise<CategoryVO[]> {
   return http.get(`/ledgers/${ledgerId}/categories`)
 }

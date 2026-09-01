@@ -15,9 +15,12 @@
           <el-option v-for="l in ledgerStore.ledgers" :key="l.id" :label="l.name" :value="l.id">
             <div class="ledger-option">
               <span class="ledger-option-name">{{ l.name }}</span>
-              <el-tag size="small" :type="l.type === 'public' ? 'primary' : 'info'" effect="plain">
-                {{ l.type === 'public' ? '公共' : '个人' }}
-              </el-tag>
+              <div class="ledger-option-tags">
+                <el-tag v-if="l.isDefault === 1" size="small" type="warning" effect="light">默认</el-tag>
+                <el-tag size="small" :type="l.type === 'public' ? 'primary' : 'info'" effect="plain">
+                  {{ l.type === 'public' ? '公共' : '个人' }}
+                </el-tag>
+              </div>
             </div>
           </el-option>
         </el-select>
@@ -234,6 +237,12 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+}
+.ledger-option-tags {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
 }
 .ledger-option-name {
   flex: 1;

@@ -90,6 +90,8 @@ public class LedgerService {
         ledger.setTheme(req.getTheme() == null ? "default" : req.getTheme());
         ledger.setOwnerId(userId);
         ledger.setStatus(1);
+        // 手动新建的账本非默认（仅注册时自动创建的"个人账本"为默认）
+        ledger.setIsDefault(0);
         ledger.setCreatedAt(LocalDateTime.now());
 
         if ("personal".equals(req.getType())) {
@@ -127,6 +129,54 @@ public class LedgerService {
             vo.setRole(lm.getRole());
             return vo;
         }).filter(java.util.Objects::nonNull).toList();
+    }
+
+    /**
+     * 新用户注册后自动创建默认账本：类型个人、名称"个人账本"、默认标记。
+     */
+    @Transactional
+    public LedgerVO createDefaultLedgerForNewUser(Long userId) {
+        Ledger ledger = new Ledger();
+        ledger.setName("个人账本");
+        ledger.setType("personal");
+        ledger.setIcon("book");
+        ledger.setTheme("default");
+        ledger.setOwnerId(userId);
+        ledger.setFamilyId(null);
+        ledger.setStatus(1);
+        ledger.setIsDefault(1);
+        ledger.setCreatedAt(LocalDateTime.now());
+        ledgerMapper.insert(ledger);
+        insertMember(ledger.getId(), userId, "creator");
+        seedDefaultCategories(ledger.getId());
+        return toVO(ledger, userId);
+    }
+
+    /**
+     * 切换默认账本：先把当前用户可见账本的默认标记清除，再将目标账本设为默认。
+     * 目标账本必须是当前用户是成员的账本。
+     */
+    @Transactional
+    public LedgerVO setDefaultLedger(Long userId, Long ledgerId) {
+        Ledger target = ledgerMapper.selectById(ledgerId);
+        if (target == null) {
+            throw BizException.notFound("账本不存在");
+        }
+        requireMember(ledgerId, userId);
+        // 清除当前用户可见账本的默认标记
+        List<LedgerMember> lms = ledgerMemberMapper.selectList(
+            Wrappers.<LedgerMember>lambdaQuery().eq(LedgerMember::getUserId, userId));
+        for (LedgerMember lm : lms) {
+            Ledger l = ledgerMapper.selectById(lm.getLedgerId());
+            if (l != null && Integer.valueOf(1).equals(l.getIsDefault())) {
+                l.setIsDefault(0);
+                ledgerMapper.updateById(l);
+            }
+        }
+        // 设置目标账本为默认
+        target.setIsDefault(1);
+        ledgerMapper.updateById(target);
+        return toVO(target, userId);
     }
 
     public LedgerVO getLedger(Long userId, Long ledgerId) {
@@ -302,6 +352,6 @@ public class LedgerService {
                 .last("limit 1"));
         return new LedgerVO(ledger.getId(), ledger.getName(), ledger.getType(), ledger.getIcon(),
             ledger.getTheme(), ledger.getOwnerId(), ledger.getFamilyId(),
-            self == null ? "member" : self.getRole(), memberCount);
+            self == null ? "member" : self.getRole(), memberCount, ledger.getIsDefault());
     }
 }

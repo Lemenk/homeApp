@@ -37,7 +37,12 @@ public class UserService {
         if (user != null) {
             return user;
         }
-        user = new User();
+        return createUser(phone);
+    }
+
+    /** 创建新用户 */
+    public User createUser(String phone) {
+        User user = new User();
         user.setPhone(phone);
         user.setNickname("用户" + phone.substring(phone.length() - 4));
         user.setStatus(1);

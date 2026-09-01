@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS t_ledger (
   owner_id BIGINT NOT NULL,
   family_id BIGINT COMMENT '公共账本关联家庭',
   status TINYINT DEFAULT 1 COMMENT '1正常 0删除',
+  is_default TINYINT DEFAULT 0 COMMENT '是否为默认账本 1默认 0非默认',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='账本';
 
@@ -81,6 +82,9 @@ CREATE TABLE IF NOT EXISTS t_account (
   icon VARCHAR(32),
   initial_balance DECIMAL(15,2) DEFAULT 0,
   balance DECIMAL(15,2) DEFAULT 0,
+  group_name VARCHAR(32) COMMENT '账户分组',
+  remark VARCHAR(255) COMMENT '备注',
+  include_in_total TINYINT DEFAULT 1 COMMENT '是否计入总资产 1计入 0不计入',
   status TINYINT DEFAULT 1,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='账户';

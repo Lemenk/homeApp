@@ -6,13 +6,13 @@
 | --- | --- | --- |
 | 前端 | Vue 3 + TypeScript + Vite 5 + Element Plus + Pinia + ECharts | 端口 5173（开发），构建产物为静态文件 |
 | 后端 | Spring Boot 3.2.5 + Java 17 + MyBatis-Plus 3.5.7 + JWT | 端口 8080 |
-| 数据库 | 开发/测试用 H2（内存，MODE=MySQL）；生产用 MySQL 8 | 建表脚本见 `backend/src/main/resources/db/init.sql` |
+| 数据库 | 开发/测试/生产统一用 MySQL 8 | 建表脚本见 `backend/src/main/resources/db/init.sql`（开发自动执行）与 `sql/schema.sql`（生产初始化） |
 
 v1 仅交付网页端；微信小程序 / iOS App 在 v2 规划中，后端接口按多端复用设计。
 
 ## 二、本地开发启动
 
-### 1. 后端（无需安装 MySQL/Redis）
+### 1. 后端（需本机 MySQL 8 可用）
 
 ```bash
 cd backend
@@ -21,7 +21,7 @@ set JAVA_HOME=C:\Users\lemenk\dev\tools\jdk-17.0.20.1+1
 mvn spring-boot:run
 ```
 
-- 开发环境默认使用内存 H2，应用启动时自动建表。
+- 数据库连接默认 `127.0.0.1:3306 / family_home / root / root`，可用环境变量 `MYSQL_HOST / MYSQL_PORT / MYSQL_DB / MYSQL_USER / MYSQL_PASSWORD` 覆盖；应用启动时自动执行建表脚本（`CREATE TABLE IF NOT EXISTS`，幂等）。
 - 验证码服务：`app.sms.debug=true`（默认），任意手机号验证码为 `123456`；生产切换为真实短信通道。
 - 接口文档：启动后访问 `http://localhost:8080/swagger-ui.html`（springdoc）。
 
@@ -99,7 +99,7 @@ location / {
 ## 四、测试
 
 ```bash
-# 后端：全部测试（H2 内存库，无需外部依赖）
+# 后端：全部测试（需本机 MySQL 8 可用，连接信息同开发配置）
 cd backend
 set JAVA_HOME=C:\Users\lemenk\dev\tools\jdk-17.0.20.1+1
 mvn test

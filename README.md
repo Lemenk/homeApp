@@ -20,7 +20,7 @@
 | --- | --- |
 | 前端 | Vue 3 + TypeScript + Vite 5 + Element Plus + Pinia + ECharts |
 | 后端 | Spring Boot 3.2 + Java 17 + MyBatis-Plus + JWT |
-| 数据库 | 开发 / 测试：H2（内存，MODE=MySQL）；生产：MySQL 8 |
+| 数据库 | 开发 / 测试 / 生产：MySQL 8（开发默认 `127.0.0.1:3306/family_home`，可用环境变量覆盖） |
 
 ## 目录结构
 
@@ -37,13 +37,13 @@ homeApp/
 
 ## 快速开始
 
-### 1. 初始化数据库（生产 / 需要 MySQL 时）
+### 1. 初始化数据库（开发 / 测试 / 生产统一使用 MySQL 8）
 
 ```bash
 mysql -u root -p < sql/schema.sql
 ```
 
-脚本会创建数据库 `family_home`（utf8mb4）及全部 12 张表。开发环境默认使用内存 H2，启动时自动建表，无需安装 MySQL。
+脚本会创建数据库 `family_home`（utf8mb4）及全部 14 张表。开发环境后端启动时也会自动执行建表脚本（`CREATE TABLE IF NOT EXISTS`，幂等），连接信息默认 `127.0.0.1:3306 / root / root`，可用环境变量 `MYSQL_HOST / MYSQL_PORT / MYSQL_DB / MYSQL_USER / MYSQL_PASSWORD` 覆盖。
 
 ### 2. 启动后端
 
@@ -78,7 +78,7 @@ npm run dev
 ## 测试
 
 ```bash
-# 后端：全部测试（H2 内存库，无需外部依赖）
+# 后端：全部测试（需本机 MySQL 可用，连接信息同开发配置）
 cd backend
 mvn test
 

@@ -21,4 +21,5 @@ export interface LedgerVO {
   familyId?: number
   role?: 'creator' | 'member'
   memberCount?: number
+  isDefault?: number
 }

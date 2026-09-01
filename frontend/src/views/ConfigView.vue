@@ -18,13 +18,29 @@
           </el-button>
         </div>
         <div class="col-body">
-          <div v-for="l in ledgers" :key="l.id" class="item-card" :class="{ active: l.id === ledgerStore.currentLedgerId }">
+          <div v-for="l in ledgers" :key="l.id" class="item-card" :class="{ active: l.id === ledgerStore.currentLedgerId, default: l.isDefault === 1 }">
             <div class="item-icon">📒</div>
             <div class="item-main">
-              <div class="item-name">{{ l.name }}</div>
+              <div class="item-name">
+                {{ l.name }}
+                <el-tag v-if="l.isDefault === 1" size="small" type="primary" effect="light" class="default-tag">默认</el-tag>
+              </div>
               <div class="item-desc">{{ l.type === 'public' ? '公共账本' : '个人账本' }} · {{ l.memberCount || 1 }}人</div>
             </div>
-            <el-button text size="small" type="primary" @click="switchLedger(l.id)">切换</el-button>
+            <el-button
+              v-if="l.isDefault !== 1 && ledgers.length > 1"
+              text
+              size="small"
+              type="primary"
+              @click="setAsDefault(l)"
+            >设为默认</el-button>
+            <el-button
+              v-else-if="l.isDefault === 1"
+              text
+              size="small"
+              disabled
+            >默认账本</el-button>
+            <el-button v-else text size="small" type="primary" @click="switchLedger(l.id)">切换</el-button>
           </div>
           <el-empty v-if="!ledgers.length" :image-size="50" description="暂无账本" />
         </div>
@@ -216,6 +232,14 @@ function switchLedger(id: number) {
   loadAccounts()
   loadCategories()
   ElMessage.success('已切换账本')
+}
+
+async function setAsDefault(l: LedgerVO) {
+  await ledgerStore.setDefault(l.id)
+  await loadLedgers()
+  loadAccounts()
+  loadCategories()
+  ElMessage.success(`已将「${l.name}」设为默认账本`)
 }
 
 function openAccountDialog() {
@@ -422,6 +446,13 @@ onMounted(async () => {
   background: #ecf5ff;
   border-color: #b3d8ff;
 }
+.item-card.default {
+  border-color: #c6e2ff;
+  background: #f0f7ff;
+}
+.default-tag {
+  margin-left: 4px;
+}
 .item-icon {
   width: 34px;
   height: 34px;
@@ -440,6 +471,8 @@ onMounted(async () => {
   min-width: 0;
 }
 .item-name {
+  display: flex;
+  align-items: center;
   font-size: 13px;
   font-weight: 500;
   color: #303133;

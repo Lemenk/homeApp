@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -46,6 +47,12 @@ public class LedgerController {
     public Result<Void> delete(@PathVariable Long id) {
         ledgerService.deleteLedger(UserContext.require(), id);
         return Result.ok();
+    }
+
+    /** 切换默认账本 */
+    @PutMapping("/{id}/default")
+    public Result<LedgerVO> setDefault(@PathVariable Long id) {
+        return Result.ok(ledgerService.setDefaultLedger(UserContext.require(), id));
     }
 
     /** 账本创建者添加成员（仅公共账本） */

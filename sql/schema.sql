@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS t_ledger (
   owner_id BIGINT NOT NULL,
   family_id BIGINT COMMENT '公共账本关联家庭',
   status TINYINT DEFAULT 1 COMMENT '1正常 0删除',
+  is_default TINYINT DEFAULT 0 COMMENT '是否为默认账本 1默认 0非默认',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='账本';
 

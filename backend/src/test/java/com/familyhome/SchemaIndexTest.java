@@ -17,9 +17,11 @@ class SchemaIndexTest {
     private JdbcTemplate jdbcTemplate;
 
     private int indexCount(String table, String indexName) {
+        // MySQL 信息模式：INFORMATION_SCHEMA.STATISTICS；表名/索引名大小写不敏感
         Integer c = jdbcTemplate.queryForObject(
-            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.INDEXES WHERE TABLE_NAME = ? AND INDEX_NAME = ?",
-            Integer.class, table.toUpperCase(), indexName.toUpperCase());
+            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS " +
+            "WHERE TABLE_SCHEMA = DATABASE() AND LOWER(TABLE_NAME) = LOWER(?) AND LOWER(INDEX_NAME) = LOWER(?)",
+            Integer.class, table, indexName);
         return c == null ? 0 : c;
     }
 
