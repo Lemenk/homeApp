@@ -1,5 +1,5 @@
 import { http } from './http'
-import type { FamilyVO, MemberVO } from '@/types/family'
+import type { FamilyVO } from '@/types/family'
 
 export function createFamily(name: string): Promise<FamilyVO> {
   return http.post('/families', { name })
@@ -7,10 +7,6 @@ export function createFamily(name: string): Promise<FamilyVO> {
 
 export function myFamily(): Promise<FamilyVO | null> {
   return http.get('/families/me')
-}
-
-export function getMembers(familyId: number): Promise<MemberVO[]> {
-  return http.get(`/families/${familyId}/members`)
 }
 
 export function refreshInvite(familyId: number): Promise<string> {

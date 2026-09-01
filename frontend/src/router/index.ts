@@ -14,12 +14,9 @@ const router = createRouter({
       component: () => import('@/components/MainLayout.vue'),
       children: [
         { path: '', name: 'home', component: () => import('@/views/HomeView.vue') },
-        { path: 'refresh', name: 'refresh', component: () => import('@/views/DataRefreshView.vue') },
         { path: 'config', name: 'config', component: () => import('@/views/ConfigView.vue') },
-        { path: 'ledgers', name: 'ledgers', component: () => import('@/views/LedgerListView.vue') },
         { path: 'bills/:id', name: 'bill-detail', component: () => import('@/views/BillDetailView.vue') },
         { path: 'accounts', name: 'accounts', component: () => import('@/views/AccountsView.vue') },
-        { path: 'budgets', name: 'budgets', component: () => import('@/views/BudgetsView.vue') },
         { path: 'statistics', name: 'statistics', component: () => import('@/views/StatisticsView.vue') },
         {
           path: 'ledgers/:id',
