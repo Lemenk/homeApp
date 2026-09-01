@@ -1,26 +1,27 @@
 <template>
   <div class="home-page">
-    <!-- 顶部欢迎栏 -->
+    <!-- 顶部：账本选择器 -->
     <div class="top-bar">
-      <div class="welcome">
-        <h2>你好，{{ userStore.user?.nickname || userStore.user?.phone }}</h2>
-        <div class="ledger-switch">
-          <el-select
-            v-if="ledgerStore.ledgers.length"
-            v-model="currentId"
-            size="small"
-            style="width: 180px"
-            @change="onSwitch"
-          >
-            <el-option
-              v-for="l in ledgerStore.ledgers"
-              :key="l.id"
-              :label="`${l.name}（${l.type === 'public' ? '公共' : '个人'}）`"
-              :value="l.id"
-            />
-          </el-select>
-          <span v-else class="no-ledger" @click="$router.push('/config')">还没有账本，去创建</span>
-        </div>
+      <div class="ledger-selector">
+        <el-select
+          v-if="ledgerStore.ledgers.length"
+          v-model="currentId"
+          class="ledger-select"
+          @change="onSwitch"
+        >
+          <template #prefix>
+            <el-icon class="ledger-prefix-icon"><Notebook /></el-icon>
+          </template>
+          <el-option v-for="l in ledgerStore.ledgers" :key="l.id" :label="l.name" :value="l.id">
+            <div class="ledger-option">
+              <span class="ledger-option-name">{{ l.name }}</span>
+              <el-tag size="small" :type="l.type === 'public' ? 'primary' : 'info'" effect="plain">
+                {{ l.type === 'public' ? '公共' : '个人' }}
+              </el-tag>
+            </div>
+          </el-option>
+        </el-select>
+        <span v-else class="no-ledger" @click="$router.push('/config')">还没有账本，去创建</span>
       </div>
     </div>
 
@@ -106,19 +107,18 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, inject, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { EditPen, Plus } from '@element-plus/icons-vue'
+import { EditPen, Notebook, Plus } from '@element-plus/icons-vue'
 import { listBills } from '@/api/bill'
 import type { BillVO } from '@/api/bill'
 import { listAccounts, summary } from '@/api/account'
 import type { AccountVO } from '@/api/account'
 import { useLedgerStore } from '@/stores/ledger'
-import { useUserStore } from '@/stores/user'
 import BillFormDialog from '@/components/BillFormDialog.vue'
 
 const ledgerStore = useLedgerStore()
-const userStore = useUserStore()
+const registerRefresh = inject<(fn: () => Promise<void>) => void>('registerRefresh')
 const recentBills = ref<BillVO[]>([])
 const accounts = ref<AccountVO[]>([])
 const showForm = ref(false)
@@ -150,6 +150,10 @@ function amountText(b: BillVO): string {
 function formatDate(d?: string): string {
   if (!d) return ''
   return d.slice(0, 16).replace('T', ' ')
+}
+
+async function loadAll() {
+  await Promise.all([loadRecent(), loadAccounts()])
 }
 
 async function loadRecent() {
@@ -185,9 +189,9 @@ function openRecord() {
 }
 
 onMounted(async () => {
-  if (!userStore.user) await userStore.fetchMe()
   await ledgerStore.fetch()
-  await Promise.all([loadRecent(), loadAccounts()])
+  await loadAll()
+  registerRefresh?.(loadAll)
 })
 </script>
 
@@ -200,18 +204,42 @@ onMounted(async () => {
   box-sizing: border-box;
 }
 
-/* 顶部欢迎栏 */
+/* 顶部：账本选择器 */
 .top-bar {
   margin-bottom: 16px;
   flex-shrink: 0;
 }
-.welcome h2 {
-  margin: 0 0 8px 0;
-  font-size: 20px;
-}
-.ledger-switch {
+.ledger-selector {
   display: flex;
   align-items: center;
+}
+.ledger-select {
+  width: 220px;
+}
+.ledger-select :deep(.el-select__wrapper) {
+  border-radius: 10px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  min-height: 40px;
+  padding: 0 12px;
+}
+.ledger-select :deep(.el-select__wrapper:hover) {
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.15);
+}
+.ledger-prefix-icon {
+  color: #409eff;
+  margin-right: 4px;
+}
+.ledger-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ledger-option-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .no-ledger {
   color: #409eff;

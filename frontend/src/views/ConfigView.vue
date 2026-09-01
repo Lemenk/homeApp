@@ -159,7 +159,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, inject, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Notebook, Wallet, Menu, Plus } from '@element-plus/icons-vue'
 import { useLedgerStore } from '@/stores/ledger'
@@ -170,6 +170,11 @@ import { listAccounts, createAccount, ACCOUNT_TYPE_LABELS, ACCOUNT_TYPE_ORDER } 
 import type { AccountVO, AccountType } from '@/api/account'
 
 const ledgerStore = useLedgerStore()
+const registerRefresh = inject<(fn: () => Promise<void>) => void>('registerRefresh')
+
+async function loadAll() {
+  await Promise.all([loadLedgers(), loadAccounts(), loadCategories()])
+}
 
 const ledgers = ref<LedgerVO[]>([])
 const accounts = ref<AccountVO[]>([])
@@ -327,7 +332,8 @@ async function toggleCategory(c: CategoryVO, enabled: boolean) {
 
 onMounted(async () => {
   await ledgerStore.fetch()
-  await Promise.all([loadLedgers(), loadAccounts(), loadCategories()])
+  await loadAll()
+  registerRefresh?.(loadAll)
 })
 </script>
 

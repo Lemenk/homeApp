@@ -19,9 +19,9 @@
       <!-- 底部：数据刷新、配置、个人信息 -->
       <div class="nav-bottom">
         <el-tooltip content="数据刷新" placement="right" :show-after="300">
-          <router-link to="/refresh" class="nav-item" :class="{ active: $route.path === '/refresh' }">
+          <div class="nav-item refresh-btn" :class="{ spinning: refreshing }" @click="triggerRefresh">
             <el-icon :size="22"><RefreshRight /></el-icon>
-          </router-link>
+          </div>
         </el-tooltip>
         <el-tooltip content="配置" placement="right" :show-after="300">
           <router-link to="/config" class="nav-item" :class="{ active: $route.path === '/config' }">
@@ -64,8 +64,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, provide, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import {
   House, DataAnalysis, RefreshRight, Setting, User, Avatar, SwitchButton,
 } from '@element-plus/icons-vue'
@@ -83,6 +84,33 @@ const avatarText = computed(() => {
   const name = userStore.user?.nickname || userStore.user?.phone || 'U'
   return name.slice(0, 1).toUpperCase()
 })
+
+/* 页面级数据刷新：各页面注册自己的刷新回调，点击侧边栏刷新图标时触发 */
+const refreshCallback = ref<(() => Promise<void> | void) | null>(null)
+const refreshing = ref(false)
+
+function registerRefresh(fn: () => Promise<void> | void) {
+  refreshCallback.value = fn
+}
+
+async function triggerRefresh() {
+  if (refreshing.value) return
+  refreshing.value = true
+  try {
+    // 先刷新基础数据（账本列表），再触发当前页面的刷新回调
+    await ledgerStore.fetch()
+    if (refreshCallback.value) {
+      await refreshCallback.value()
+    }
+    ElMessage.success('数据已刷新')
+  } catch (e) {
+    ElMessage.error('刷新失败')
+  } finally {
+    refreshing.value = false
+  }
+}
+
+provide('registerRefresh', registerRefresh)
 
 function onUserCommand(cmd: string) {
   if (cmd === 'account') {
@@ -157,6 +185,15 @@ onMounted(async () => {
 .nav-item.active {
   background: #ecf5ff;
   color: #409eff;
+}
+
+.refresh-btn.spinning .el-icon {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .user-btn {
