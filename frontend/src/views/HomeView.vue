@@ -46,7 +46,7 @@
             <div class="bill-icon" :class="b.type">{{ typeIcon(b) }}</div>
             <div class="bill-main">
               <div class="bill-title">{{ b.type === 'transfer' ? '转账' : b.categoryName || '未分类' }}</div>
-              <div class="bill-sub">{{ formatDate(b.billDate) }} · {{ b.accountName || '未指定账户' }}</div>
+              <div class="bill-sub">{{ formatDate(b.billDate) }} · {{ b.accounts[0]?.accountName || '未指定账户' }}</div>
             </div>
             <div class="bill-amount" :class="b.type">{{ amountText(b) }}</div>
           </div>
@@ -458,5 +458,29 @@ onMounted(async () => {
   font-size: 13px;
   font-weight: 600;
   color: #606266;
+}
+
+/* 移动端适配：左右分栏改为纵向堆叠 */
+@media (max-width: 768px) {
+  .home-page {
+    padding: 14px 12px;
+  }
+  .main-body {
+    flex-direction: column;
+  }
+  .left-panel {
+    flex: none;
+    min-height: 240px;
+    max-height: 40vh;
+  }
+  .right-panel {
+    flex: none;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+  .ledger-select {
+    width: 100%;
+  }
 }
 </style>

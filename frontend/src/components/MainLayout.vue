@@ -214,6 +214,18 @@ onMounted(async () => {
   overflow-y: auto;
   background: #f5f7fa;
 }
+
+/* 移动端：侧边栏收窄，适配常见手机尺寸 */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 52px;
+    padding: 10px 0;
+  }
+  .nav-item {
+    width: 40px;
+    height: 40px;
+  }
+}
 </style>
 
 <style>

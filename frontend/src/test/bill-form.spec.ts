@@ -115,4 +115,32 @@ describe('BillFormDialog 记账金额步骤', () => {
     await flushPromises()
     expect(wrapper.text()).toContain('转出账户')
   })
+
+  it('点击"+ 添加账户"不应把点击事件对象误设为账户（回归 [object PointerEvent] bug）', async () => {
+    const wrapper = mountDialog()
+    await flushPromises()
+    await nextButton(wrapper)!.trigger('click')
+    await flushPromises()
+
+    await wrapper.find('input[data-test="amount"]').setValue(100)
+    await flushPromises()
+
+    const food = wrapper.findAll('.cat-name').find((d: any) => d.text() === '餐饮')
+    await food!.trigger('click')
+    await flushPromises()
+
+    await nextButton(wrapper)!.trigger('click')
+    await flushPromises()
+
+    // 进入账户步骤后点击"+ 添加账户"
+    const addBtn = wrapper.findAll('button').find((b: any) => b.text().includes('添加账户'))
+    await addBtn!.trigger('click')
+    await flushPromises()
+
+    // 新增的账户选择框应显示占位符"选择账户"，而不是把 PointerEvent 对象渲染为 "[object ...]"
+    expect(wrapper.text()).not.toContain('[object')
+    const selects = wrapper.findAll('.split-row .el-select')
+    expect(selects.length).toBe(1)
+    expect(selects[0].text()).toContain('选择账户')
+  })
 })

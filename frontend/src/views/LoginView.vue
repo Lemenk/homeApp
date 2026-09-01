@@ -118,4 +118,12 @@ onUnmounted(() => {
   text-align: center;
   margin-top: 12px;
 }
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .login-card {
+    width: calc(100vw - 40px);
+    max-width: 380px;
+  }
+}
 </style>

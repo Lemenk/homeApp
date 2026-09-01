@@ -90,4 +90,11 @@ onMounted(() => {
   margin-top: 12px;
   font-size: 15px;
 }
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .family {
+    padding: 14px 12px;
+  }
+}
 </style>

@@ -24,6 +24,11 @@
       </div>
 
       <el-descriptions :column="1" border>
+        <el-descriptions-item label="类型">
+          <el-tag :type="bill.type === 'expense' ? 'danger' : bill.type === 'income' ? 'success' : 'info'">
+            {{ typeLabel }}
+          </el-tag>
+        </el-descriptions-item>
         <el-descriptions-item label="记账人">{{ bill.memberName }}</el-descriptions-item>
         <el-descriptions-item label="时间">{{ formatTime(bill.billDate) }}</el-descriptions-item>
         <el-descriptions-item label="账户">
@@ -195,5 +200,12 @@ onMounted(load)
 }
 .log-time {
   font-size: 12px;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .bill-detail {
+    padding: 14px 12px;
+  }
 }
 </style>

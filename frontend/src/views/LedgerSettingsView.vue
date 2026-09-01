@@ -139,4 +139,11 @@ async function onDeleteTag(row: TagVO) {
 .tag {
   margin: 4px 8px 4px 0;
 }
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .settings {
+    padding: 14px 12px;
+  }
+}
 </style>

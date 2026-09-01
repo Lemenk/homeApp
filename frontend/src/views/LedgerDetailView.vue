@@ -282,4 +282,18 @@ onMounted(async () => {
   justify-content: center;
   margin-top: 12px;
 }
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .ledger-detail {
+    padding: 14px 12px;
+  }
+  .filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .filter-right {
+    flex-wrap: wrap;
+  }
+}
 </style>

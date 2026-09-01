@@ -183,4 +183,11 @@ onMounted(async () => {
 .cat-row .chart {
   height: 300px;
 }
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .stats-page {
+    padding: 14px 12px;
+  }
+}
 </style>

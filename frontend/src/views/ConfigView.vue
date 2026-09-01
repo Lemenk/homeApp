@@ -99,7 +99,7 @@
               <el-switch
                 :model-value="c.enabled === 1"
                 size="small"
-                @change="(v) => toggleCategory(c, v)"
+                @change="(v: string | number | boolean) => toggleCategory(c, !!v)"
               />
             </div>
             <el-empty v-if="!filteredCategories.length" :image-size="50" description="暂无分类" />
@@ -141,7 +141,9 @@
           </el-select>
         </el-form-item>
         <el-form-item label="初始余额">
-          <el-input-number v-model="accountForm.initialBalance" :precision="2" :controls="false" style="width: 100%" />
+          <div class="balance-wrap" :class="{ 'is-gray': accountForm.balanceDisabled }" @click="onAccountBalanceClick">
+            <el-input-number ref="accountBalanceInput" v-model="accountForm.initialBalance" :precision="2" :controls="false" style="width: 100%" :readonly="accountForm.balanceDisabled" @blur="onAccountBalanceBlur" />
+          </div>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -175,11 +177,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, onMounted, reactive, ref } from 'vue'
+import { computed, inject, nextTick, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Notebook, Wallet, Menu, Plus } from '@element-plus/icons-vue'
 import { useLedgerStore } from '@/stores/ledger'
-import { listLedgers, createLedger, listCategories, createCategory, toggleCategory } from '@/api/ledger'
+import { listLedgers, createLedger, listCategories, createCategory, toggleCategory as toggleCategoryApi } from '@/api/ledger'
 import type { CategoryVO } from '@/api/ledger'
 import type { LedgerVO } from '@/types'
 import { listAccounts, createAccount, ACCOUNT_TYPE_LABELS, ACCOUNT_TYPE_ORDER } from '@/api/account'
@@ -205,7 +207,29 @@ const ledgerForm = reactive({ name: '', type: 'personal' as 'personal' | 'public
 // 新增账户
 const showAccountDialog = ref(false)
 const creatingAccount = ref(false)
-const accountForm = reactive({ name: '', type: 'asset' as AccountType, initialBalance: 0 })
+const accountForm = reactive<{ name: string; type: AccountType; initialBalance: number | null; balanceDisabled: boolean }>({
+  name: '',
+  type: 'asset',
+  initialBalance: 0,
+  balanceDisabled: true,
+})
+
+/* 初始余额：默认置灰 0.00，点击置空可输入 */
+const accountBalanceInput = ref()
+function onAccountBalanceClick() {
+  if (accountForm.balanceDisabled) {
+    accountForm.balanceDisabled = false
+    accountForm.initialBalance = null
+    nextTick(() => accountBalanceInput.value?.focus())
+  }
+}
+function onAccountBalanceBlur() {
+  const v = accountForm.initialBalance
+  if (v == null || v === 0) {
+    accountForm.initialBalance = 0
+    accountForm.balanceDisabled = true
+  }
+}
 
 // 新增分类
 const showCategoryDialog = ref(false)
@@ -250,6 +274,7 @@ function openAccountDialog() {
   accountForm.name = ''
   accountForm.type = 'asset'
   accountForm.initialBalance = 0
+  accountForm.balanceDisabled = true
   showAccountDialog.value = true
 }
 
@@ -346,7 +371,7 @@ async function submitCategory() {
 
 async function toggleCategory(c: CategoryVO, enabled: boolean) {
   try {
-    await toggleCategory(c.id, enabled)
+    await toggleCategoryApi(c.id, enabled)
     c.enabled = enabled ? 1 : 0
   } catch (e: any) {
     ElMessage.error('操作失败')
@@ -368,6 +393,19 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
+}
+
+/* 初始余额：默认置灰，点击置空 */
+.balance-wrap {
+  cursor: pointer;
+  width: 100%;
+}
+.balance-wrap.is-gray .el-input__wrapper {
+  background-color: #f5f7fa;
+  box-shadow: none;
+}
+.balance-wrap.is-gray input {
+  caret-color: transparent;
 }
 
 .page-header {
@@ -512,5 +550,18 @@ onMounted(async () => {
 }
 .cat-item {
   cursor: default;
+}
+
+/* 移动端适配：三列改为单列纵向排列 */
+@media (max-width: 768px) {
+  .config-page {
+    padding: 14px 12px;
+  }
+  .config-columns {
+    grid-template-columns: 1fr;
+  }
+  .config-col {
+    min-height: 0;
+  }
 }
 </style>

@@ -105,4 +105,11 @@ onMounted(async () => {
   text-align: center;
   margin-top: 8px;
 }
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .settings-page {
+    padding: 14px 12px;
+  }
+}
 </style>

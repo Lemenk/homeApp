@@ -103,7 +103,7 @@
             <el-button text type="danger" @click="removeItem(it.key)">删除</el-button>
           </div>
         </div>
-        <el-button size="small" @click="addItem">+ 添加账户</el-button>
+        <el-button size="small" @click="addItem()">+ 添加账户</el-button>
         <el-alert
           v-if="!splitOk"
           type="warning"
@@ -423,5 +423,17 @@ onMounted(() => {
   display: flex;
   justify-content: center;
   width: 100%;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .cat-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+  .amount-input {
+    width: 100%;
+    max-width: 240px;
+  }
 }
 </style>

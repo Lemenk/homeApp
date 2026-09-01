@@ -144,15 +144,21 @@
             <el-icon><Money /></el-icon>
             <span>账户余额</span>
           </div>
-          <el-input-number
-            v-model="createForm.initialBalance"
-            :precision="2"
-            :controls="false"
-            size="large"
-            class="form-input"
-          >
-            <template #prepend>¥</template>
-          </el-input-number>
+          <div class="balance-wrap" :class="{ 'is-gray': createForm.balanceDisabled }" @click="onBalanceClick">
+            <el-input-number
+              ref="balanceInput"
+              v-model="createForm.initialBalance"
+              :precision="2"
+              :controls="false"
+              size="large"
+              class="form-input"
+              :readonly="createForm.balanceDisabled"
+              @blur="onBalanceBlur"
+            >
+              <template #prepend>¥</template>
+            </el-input-number>
+          </div>
+          <div v-if="createForm.balanceDisabled" class="balance-tip">默认 0.00，点击可填写初始余额</div>
         </div>
 
         <!-- 分组 -->
@@ -225,7 +231,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
   Wallet, ArrowRight, ArrowLeft, Picture, EditPen, Money, Folder, Document, CircleCheck,
@@ -284,11 +290,12 @@ const ICON_OPTIONS: IconOption[] = [
 const createForm = reactive<{
   name: string
   type: AccountType
-  initialBalance: number
+  initialBalance: number | null
   icon: string
   groupName: string
   remark: string
   includeInTotal: number
+  balanceDisabled: boolean
 }>({
   name: '',
   type: 'asset',
@@ -297,6 +304,7 @@ const createForm = reactive<{
   groupName: '',
   remark: '',
   includeInTotal: 1,
+  balanceDisabled: true,
 })
 
 const TYPE_LABELS: Record<string, string> = ACCOUNT_TYPE_LABELS
@@ -315,12 +323,12 @@ function typeMeta(t: AccountType) {
   return TYPE_META[t]
 }
 
-function iconOption(key: string): IconOption {
+function iconOption(key?: string): IconOption {
   return ICON_OPTIONS.find((i) => i.key === key) || ICON_OPTIONS[0]
 }
-function iconEmoji(key: string) { return iconOption(key).emoji }
-function iconLabel(key: string) { return iconOption(key).label }
-function iconBg(key: string) { return iconOption(key).bg }
+function iconEmoji(key?: string) { return iconOption(key).emoji }
+function iconLabel(key?: string) { return iconOption(key).label }
+function iconBg(key?: string) { return iconOption(key).bg }
 
 function openCreate() {
   createStep.value = 1
@@ -342,6 +350,24 @@ function resetCreate() {
   createForm.groupName = ''
   createForm.remark = ''
   createForm.includeInTotal = 1
+  createForm.balanceDisabled = true
+}
+
+/* ---------- 初始余额：默认置灰 0.00，点击置空可输入 ---------- */
+const balanceInput = ref()
+function onBalanceClick() {
+  if (createForm.balanceDisabled) {
+    createForm.balanceDisabled = false
+    createForm.initialBalance = null
+    nextTick(() => balanceInput.value?.focus())
+  }
+}
+function onBalanceBlur() {
+  const v = createForm.initialBalance
+  if (v == null || v === 0) {
+    createForm.initialBalance = 0
+    createForm.balanceDisabled = true
+  }
 }
 
 /* ---------- 调整余额 ---------- */
@@ -631,6 +657,24 @@ onMounted(async () => {
   width: 100%;
 }
 
+/* 初始余额：默认置灰，点击置空 */
+.balance-wrap {
+  cursor: pointer;
+}
+.balance-wrap.is-gray .el-input__wrapper {
+  background-color: #f5f7fa;
+  box-shadow: none;
+}
+.balance-wrap.is-gray input {
+  caret-color: transparent;
+}
+.balance-tip {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #909399;
+  line-height: 1.4;
+}
+
 /* 图标网格 */
 .icon-grid {
   display: grid;
@@ -720,5 +764,21 @@ onMounted(async () => {
 }
 .dialog-footer .el-button {
   min-width: 88px;
+}
+
+/* 移动端适配：图标网格减少列数、内边距收紧 */
+@media (max-width: 768px) {
+  .accounts-page {
+    padding: 14px 12px;
+  }
+  .icon-grid {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+    padding: 8px;
+  }
+  .summary {
+    flex-direction: column;
+    gap: 8px;
+  }
 }
 </style>
