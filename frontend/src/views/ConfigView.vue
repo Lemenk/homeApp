@@ -27,6 +27,7 @@
               </div>
               <div class="item-desc">{{ l.type === 'public' ? '公共账本' : '个人账本' }} · {{ l.memberCount || 1 }}人</div>
             </div>
+            <el-button text size="small" type="info" @click="$router.push(`/ledgers/${l.id}/settings`)">管理</el-button>
             <el-button
               v-if="l.isDefault !== 1 && ledgers.length > 1"
               text

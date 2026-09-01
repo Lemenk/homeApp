@@ -34,7 +34,7 @@
         <div class="type-title">{{ typeLabel(group.type) }}</div>
         <div v-for="a in group.accounts" :key="a.id" class="account-row">
           <div class="acc-icon" :style="{ background: iconBg(a.icon) }">
-            <span class="acc-emoji">{{ iconEmoji(a.icon) }}</span>
+            <AppIcon :icon="a.icon" :size="22" />
           </div>
           <div class="acc-main">
             <div class="acc-name">{{ a.name }}</div>
@@ -96,7 +96,7 @@
         </div>
         <div class="dialog-header">
           <div class="header-icon" :style="{ background: iconBg(createForm.icon) }">
-            <span class="header-emoji">{{ iconEmoji(createForm.icon) }}</span>
+            <AppIcon :icon="createForm.icon" :size="28" />
           </div>
           <div class="header-title">添加{{ typeLabel(createForm.type) }}</div>
           <div class="header-sub">当前图标：{{ iconLabel(createForm.icon) }}</div>
@@ -117,7 +117,7 @@
               @click="createForm.icon = ic.key"
             >
               <div class="icon-circle" :style="{ background: ic.bg }">
-                <span class="icon-emoji">{{ ic.emoji }}</span>
+                <AppIcon :icon="ic.key" :size="20" />
               </div>
               <div class="icon-name">{{ ic.label }}</div>
             </div>
@@ -246,6 +246,8 @@ import {
 } from '@/api/account'
 import type { AccountVO, AccountType } from '@/api/account'
 import { useLedgerStore } from '@/stores/ledger'
+import { ICON_OPTIONS, iconLabel, iconBg } from '@/utils/accountIcon'
+import AppIcon from '@/components/AppIcon.vue'
 
 const ledgerStore = useLedgerStore()
 const accounts = ref<AccountVO[]>([])
@@ -255,37 +257,6 @@ const summaryData = ref({ totalAssets: 0, totalLiability: 0, netAssets: 0, accou
 const showCreate = ref(false)
 const createStep = ref(1) // 1=选类型, 2=填表单
 const creating = ref(false)
-
-interface IconOption { key: string; label: string; emoji: string; bg: string }
-const ICON_OPTIONS: IconOption[] = [
-  { key: 'cash', label: '现金', emoji: '¥', bg: '#FFF3E0' },
-  { key: 'wechat', label: '微信', emoji: '💬', bg: '#E8F5E9' },
-  { key: 'alipay', label: '支付宝', emoji: '支', bg: '#E3F2FD' },
-  { key: 'bankcard', label: '银行卡', emoji: '💳', bg: '#FFF8E1' },
-  { key: 'creditcard', label: '信用卡', emoji: '💳', bg: '#ECEFF1' },
-  { key: 'member', label: '会员卡', emoji: '🎫', bg: '#FFF3E0' },
-  { key: 'meal', label: '饭卡', emoji: '🍱', bg: '#FFF3E0' },
-  { key: 'bus', label: '公交卡', emoji: '🚌', bg: '#E8F5E9' },
-  { key: 'huabei', label: '花呗', emoji: '🌸', bg: '#E3F2FD' },
-  { key: 'baitiao', label: '白条', emoji: '📋', bg: '#FFEBEE' },
-  { key: 'jd', label: '京东金融', emoji: '🐕', bg: '#FFEBEE' },
-  { key: 'qq', label: 'QQ钱包', emoji: '🐧', bg: '#E3F2FD' },
-  { key: 'stock', label: '股票', emoji: '📈', bg: '#FFEBEE' },
-  { key: 'fund', label: '基金', emoji: '📊', bg: '#E8F5E9' },
-  { key: 'finance', label: '理财', emoji: '💰', bg: '#FFF8E1' },
-  { key: 'deposit', label: '存款', emoji: '🏦', bg: '#E3F2FD' },
-  { key: 'fixed', label: '固定资产', emoji: '🔒', bg: '#ECEFF1' },
-  { key: 'house', label: '房子', emoji: '🏠', bg: '#FFEBEE' },
-  { key: 'car', label: '车', emoji: '🚗', bg: '#E3F2FD' },
-  { key: 'insurance', label: '保险', emoji: '🛡️', bg: '#E3F2FD' },
-  { key: 'reimburse', label: '报销', emoji: '🧾', bg: '#E3F2FD' },
-  { key: 'deposit_fee', label: '押金', emoji: '🔑', bg: '#E3F2FD' },
-  { key: 'crypto', label: '虚拟货币', emoji: '🪙', bg: '#F3E5F5' },
-  { key: 'ledger', label: '账本', emoji: '📒', bg: '#ECEFF1' },
-  { key: 'other', label: '其他', emoji: '⭐', bg: '#E8F5E9' },
-  { key: 'lend', label: '借出', emoji: '💸', bg: '#FFF8E1' },
-  { key: 'borrow', label: '借入', emoji: '💵', bg: '#FFF8E1' },
-]
 
 const createForm = reactive<{
   name: string
@@ -322,13 +293,6 @@ function typeLabel(t: string) {
 function typeMeta(t: AccountType) {
   return TYPE_META[t]
 }
-
-function iconOption(key?: string): IconOption {
-  return ICON_OPTIONS.find((i) => i.key === key) || ICON_OPTIONS[0]
-}
-function iconEmoji(key?: string) { return iconOption(key).emoji }
-function iconLabel(key?: string) { return iconOption(key).label }
-function iconBg(key?: string) { return iconOption(key).bg }
 
 function openCreate() {
   createStep.value = 1

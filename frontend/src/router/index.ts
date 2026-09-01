@@ -19,11 +19,6 @@ const router = createRouter({
         { path: 'accounts', name: 'accounts', component: () => import('@/views/AccountsView.vue') },
         { path: 'statistics', name: 'statistics', component: () => import('@/views/StatisticsView.vue') },
         {
-          path: 'ledgers/:id',
-          name: 'ledger-detail',
-          component: () => import('@/views/LedgerDetailView.vue'),
-        },
-        {
           path: 'ledgers/:id/settings',
           name: 'ledger-settings',
           component: () => import('@/views/LedgerSettingsView.vue'),

@@ -30,28 +30,83 @@
 
     <!-- 主体：左侧近期账单 + 右侧记账模块 -->
     <div class="main-body">
-      <!-- 左侧：近期账单 -->
+      <!-- 左侧：近期账单（年月选择 + 月度统计 + 按日分组列表） -->
       <div class="left-panel">
         <div class="panel-header">
           <span class="panel-title">近期账单</span>
-          <el-button text type="primary" size="small" @click="$router.push(`/ledgers/${ledgerStore.currentLedgerId}`)">查看全部</el-button>
-        </div>
-        <div class="bill-list" v-if="recentBills.length">
-          <div
-            v-for="b in recentBills"
-            :key="b.id"
-            class="bill-row"
-            @click="$router.push(`/bills/${b.id}`)"
-          >
-            <div class="bill-icon" :class="b.type">{{ typeIcon(b) }}</div>
-            <div class="bill-main">
-              <div class="bill-title">{{ b.type === 'transfer' ? '转账' : b.categoryName || '未分类' }}</div>
-              <div class="bill-sub">{{ formatDate(b.billDate) }} · {{ b.accounts[0]?.accountName || '未指定账户' }}</div>
-            </div>
-            <div class="bill-amount" :class="b.type">{{ amountText(b) }}</div>
+          <div class="month-nav">
+            <el-button circle size="small" class="month-nav-btn" @click="shiftMonth(-1)">
+              <el-icon><ArrowLeft /></el-icon>
+            </el-button>
+            <el-date-picker
+              v-model="month"
+              type="month"
+              format="YYYY年M月"
+              value-format="YYYY-MM"
+              placeholder="选择月份"
+              :clearable="false"
+              class="month-select"
+              @change="load"
+            />
+            <el-button circle size="small" class="month-nav-btn" @click="shiftMonth(1)">
+              <el-icon><ArrowRight /></el-icon>
+            </el-button>
+            <el-button size="small" class="month-today" @click="backToThisMonth">本月</el-button>
           </div>
         </div>
-        <el-empty v-else :image-size="80" description="还没有账单">
+
+        <!-- 月度统计 -->
+        <div class="month-stats">
+          <div class="stat-item">
+            <div class="stat-label">支出</div>
+            <div class="stat-value expense">-{{ stats.expense.toFixed(2) }}</div>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <div class="stat-label">收入</div>
+            <div class="stat-value income">+{{ stats.income.toFixed(2) }}</div>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <div class="stat-label">结余</div>
+            <div class="stat-value" :class="stats.balance >= 0 ? 'income' : 'expense'">{{ sign(stats.balance) }}</div>
+          </div>
+        </div>
+
+        <!-- 按日分组账单列表 -->
+        <div class="bill-list" v-if="groups.length">
+          <div v-for="g in groups" :key="g.date" class="day-group">
+            <div class="day-head">
+              <span class="day-date">{{ dayLabel(g.date) }}</span>
+              <span class="day-summary">
+                收入 {{ fmt(g.income) }}　支出 {{ fmt(g.expense) }}　结余 {{ sign(g.balance) }}
+              </span>
+            </div>
+            <div v-for="b in g.list" :key="b.id" class="bill-row" @click="$router.push(`/bills/${b.id}`)">
+              <div class="bill-icon" :class="b.type">{{ categoryIcon(b) }}</div>
+              <div class="bill-main">
+                <div class="bill-title">
+                  {{ b.type === 'transfer' ? '转账' : b.categoryName || '未分类' }}
+                </div>
+                <div class="bill-sub">
+                  <span class="bill-time">{{ timeOf(b.billDate) }}</span>
+                  <el-tag v-for="t in b.tags" :key="t.id" size="small" :color="t.color" class="bill-tag">
+                    {{ t.name }}
+                  </el-tag>
+                </div>
+                <div v-if="b.remark" class="bill-remark">{{ b.remark }}</div>
+              </div>
+              <div class="bill-right">
+                <div v-for="a in b.accounts" :key="a.accountId" class="bill-account">
+                  <span class="acc-emoji" :style="{ background: accBg(a.accountId) }">{{ accEmoji(a.accountId) }}</span>
+                  <span class="acc-name">{{ a.accountName }}</span>
+                </div>
+                <div class="bill-amount" :class="b.type">{{ amountText(b) }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <el-empty v-else :image-size="80" description="该月份还没有账单">
           <el-button type="primary" @click="openRecord">去记一笔</el-button>
         </el-empty>
       </div>
@@ -66,16 +121,16 @@
             <div class="record-title">快速记账</div>
           </div>
 
-          <!-- 本月收支概览 -->
+          <!-- 选中月份收支概览 -->
           <div class="month-summary">
             <div class="sum-item">
-              <div class="sum-label">本月收入</div>
-              <div class="sum-value income">+{{ monthIncome.toFixed(2) }}</div>
+              <div class="sum-label">{{ monthLabel }}收入</div>
+              <div class="sum-value income">+{{ stats.income.toFixed(2) }}</div>
             </div>
             <div class="sum-divider"></div>
             <div class="sum-item">
-              <div class="sum-label">本月支出</div>
-              <div class="sum-value expense">-{{ monthExpense.toFixed(2) }}</div>
+              <div class="sum-label">{{ monthLabel }}支出</div>
+              <div class="sum-value expense">-{{ stats.expense.toFixed(2) }}</div>
             </div>
           </div>
 
@@ -105,36 +160,55 @@
       </div>
     </div>
 
-    <BillFormDialog v-model="showForm" :ledger-id="ledgerStore.currentLedgerId" @saved="loadRecent" />
+    <BillFormDialog v-model="showForm" :ledger-id="ledgerStore.currentLedgerId" @saved="load" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, inject, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { EditPen, Notebook, Plus } from '@element-plus/icons-vue'
+import { ArrowLeft, ArrowRight, EditPen, Notebook, Plus } from '@element-plus/icons-vue'
 import { listBills } from '@/api/bill'
 import type { BillVO } from '@/api/bill'
 import { listAccounts, summary } from '@/api/account'
 import type { AccountVO } from '@/api/account'
 import { useLedgerStore } from '@/stores/ledger'
 import BillFormDialog from '@/components/BillFormDialog.vue'
+import { groupBillsByDay, monthStats, parseBillDateTime } from '@/utils/billStats'
+import { iconEmoji as accountEmoji, iconBg as accountBg } from '@/utils/accountIcon'
+import { categoryEmoji, isKnownCategoryIcon } from '@/utils/categoryIcon'
 
 const ledgerStore = useLedgerStore()
 const registerRefresh = inject<(fn: () => Promise<void>) => void>('registerRefresh')
-const recentBills = ref<BillVO[]>([])
+const bills = ref<BillVO[]>([])
 const accounts = ref<AccountVO[]>([])
 const showForm = ref(false)
-const monthIncome = ref(0)
-const monthExpense = ref(0)
+
+/** 当前选中月份 YYYY-MM */
+const month = ref('')
+const thisMonth = (() => {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+})()
 
 const currentId = computed({
   get: () => ledgerStore.currentLedgerId,
   set: (v: number) => ledgerStore.switchTo(v),
 })
 
+const monthLabel = computed(() => {
+  const [y, m] = month.value.split('-').map(Number)
+  return `${y}年${m}月`
+})
+
+/** 选中月份收支统计 */
+const stats = computed(() => monthStats(bills.value))
+
+/** 按日分组（日期倒序，组内时间倒序） */
+const groups = computed(() => groupBillsByDay(bills.value))
+
 function onSwitch() {
-  loadRecent()
+  load()
   loadAccounts()
 }
 
@@ -144,34 +218,80 @@ function typeIcon(b: BillVO): string {
   return '🔁'
 }
 
+/** 分类图标：优先使用账单分类自身 emoji，否则回退到类型图标 */
+function categoryIcon(b: BillVO): string {
+  if (isKnownCategoryIcon(b.categoryIcon)) return categoryEmoji(b.categoryIcon)
+  return typeIcon(b)
+}
+
+/** 账户 id → icon 映射（用于账单行的账户图标展示） */
+const accountIconMap = computed(() => {
+  const m = new Map<number, string>()
+  for (const a of accounts.value) m.set(a.id, a.icon ?? 'other')
+  return m
+})
+function accEmoji(accountId: number) {
+  return accountEmoji(accountIconMap.value.get(accountId))
+}
+function accBg(accountId: number) {
+  return accountBg(accountIconMap.value.get(accountId))
+}
+
 function amountText(b: BillVO): string {
   if (b.type === 'expense') return `-${b.amount.toFixed(2)}`
   if (b.type === 'income') return `+${b.amount.toFixed(2)}`
   return b.amount.toFixed(2)
 }
 
-function formatDate(d?: string): string {
-  if (!d) return ''
-  return d.slice(0, 16).replace('T', ' ')
+function fmt(n: number): string {
+  return n.toFixed(2)
+}
+function sign(n: number): string {
+  return `${n >= 0 ? '+' : ''}${n.toFixed(2)}`
+}
+
+function shiftMonth(delta: number) {
+  const [y, m] = month.value.split('-').map(Number)
+  const d = new Date(y, m - 1 + delta, 1)
+  month.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  load()
+}
+
+function backToThisMonth() {
+  month.value = thisMonth
+  load()
+}
+
+function dayLabel(date: string): string {
+  const [y, m, d] = date.split('-').map(Number)
+  const now = new Date()
+  const label = `${m}月${d}日`
+  if (y === now.getFullYear() && m === now.getMonth() + 1 && d === now.getDate()) {
+    return `今天 ${label}`
+  }
+  return label
+}
+
+function timeOf(billDate?: string): string {
+  return parseBillDateTime(billDate).time
 }
 
 async function loadAll() {
-  await Promise.all([loadRecent(), loadAccounts()])
+  await Promise.all([load(), loadAccounts()])
 }
 
-async function loadRecent() {
+/** 加载选中月份账单 */
+async function load() {
   if (!ledgerStore.currentLedgerId) return
-  const res = await listBills(ledgerStore.currentLedgerId, { page: 1, size: 15 })
-  recentBills.value = res.list
-  // 计算本月收支
-  const now = new Date()
-  const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-  monthIncome.value = res.list
-    .filter((b) => b.type === 'income' && (b.billDate || '').startsWith(ym))
-    .reduce((s, b) => s + b.amount, 0)
-  monthExpense.value = res.list
-    .filter((b) => b.type === 'expense' && (b.billDate || '').startsWith(ym))
-    .reduce((s, b) => s + b.amount, 0)
+  const [y, m] = month.value.split('-').map(Number)
+  const lastDay = new Date(y, m, 0).getDate()
+  const res = await listBills(ledgerStore.currentLedgerId, {
+    page: 1,
+    size: 1000,
+    startDate: `${month.value}-01`,
+    endDate: `${month.value}-${String(lastDay).padStart(2, '0')}`,
+  })
+  bills.value = res.list
 }
 
 async function loadAccounts() {
@@ -193,6 +313,7 @@ function openRecord() {
 
 onMounted(async () => {
   await ledgerStore.fetch()
+  month.value = thisMonth
   await loadAll()
   registerRefresh?.(loadAll)
 })
@@ -266,7 +387,7 @@ onMounted(async () => {
 
 /* 左侧：近期账单 */
 .left-panel {
-  flex: 1.4;
+  flex: 1.6;
   background: #fff;
   border-radius: 12px;
   padding: 16px 20px;
@@ -279,22 +400,97 @@ onMounted(async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   flex-shrink: 0;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 .panel-title {
   font-size: 15px;
   font-weight: 600;
   color: #303133;
 }
+
+/* 年月选择 */
+.month-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.month-select {
+  width: 142px;
+}
+.month-select :deep(.el-input__inner) {
+  text-align: center;
+  font-weight: 600;
+  font-size: 14px;
+}
+.month-nav-btn {
+  color: var(--el-color-primary);
+}
+
+/* 月度统计 */
+.month-stats {
+  display: flex;
+  align-items: center;
+  padding: 10px 0;
+  margin-bottom: 10px;
+  background: #f8f9fb;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+.stat-item {
+  flex: 1;
+  text-align: center;
+}
+.stat-label {
+  font-size: 12px;
+  color: #909399;
+}
+.stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+.stat-value.expense {
+  color: #f56c6c;
+}
+.stat-value.income {
+  color: #67c23a;
+}
+.stat-divider {
+  width: 1px;
+  height: 30px;
+  background: #e4e7ed;
+}
+
 .bill-list {
   flex: 1;
   overflow-y: auto;
+  margin: 0 -4px;
+}
+.day-group {
+  margin-bottom: 6px;
+}
+.day-head {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 4px;
+  color: #909399;
+  font-size: 12px;
+  border-radius: 6px;
+}
+.day-date {
+  font-weight: 600;
+  color: #606266;
+}
+.day-summary {
+  font-size: 11px;
 }
 .bill-row {
   display: flex;
   align-items: center;
-  padding: 10px 8px;
+  padding: 8px 8px;
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.15s;
@@ -302,15 +498,20 @@ onMounted(async () => {
 .bill-row:hover {
   background: #f5f7fa;
 }
+.bill-time {
+  font-size: 11px;
+  color: #c0c4cc;
+  margin-right: 6px;
+}
 .bill-icon {
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
-  margin-right: 12px;
+  font-size: 17px;
+  margin-right: 10px;
   flex-shrink: 0;
   background: #f0f2f5;
 }
@@ -324,15 +525,61 @@ onMounted(async () => {
 .bill-title {
   font-size: 14px;
   color: #303133;
+  font-weight: 500;
 }
 .bill-sub {
   font-size: 12px;
   color: #909399;
   margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bill-remark {
+  font-size: 12px;
+  color: #606266;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bill-tag {
+  margin-left: 4px;
+}
+/* 右侧：账户（图标+名称）与金额 */
+.bill-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+.bill-account {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.acc-emoji {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.acc-name {
+  font-size: 12px;
+  color: #606266;
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .bill-amount {
   font-weight: 600;
-  font-size: 15px;
+  font-size: 14px;
   flex-shrink: 0;
 }
 .bill-amount.expense { color: #f56c6c; }
@@ -346,7 +593,7 @@ onMounted(async () => {
   flex-direction: column;
   gap: 16px;
   min-width: 280px;
-  max-width: 380px;
+  max-width: 360px;
 }
 .record-card {
   background: #fff;
@@ -470,8 +717,16 @@ onMounted(async () => {
   }
   .left-panel {
     flex: none;
-    min-height: 240px;
-    max-height: 40vh;
+    min-height: 260px;
+    max-height: 48vh;
+  }
+  .panel-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .month-nav {
+    width: 100%;
+    justify-content: center;
   }
   .right-panel {
     flex: none;

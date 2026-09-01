@@ -33,6 +33,9 @@
         <el-descriptions-item label="时间">{{ formatTime(bill.billDate) }}</el-descriptions-item>
         <el-descriptions-item label="账户">
           <div v-for="a in bill.accounts" :key="a.accountId" class="acc-line">
+            <span class="acc-emoji" :style="{ background: accBg(a.accountId) }">
+              <AppIcon :icon="accountMap.get(a.accountId)" :size="16" />
+            </span>
             {{ directionLabel(a.direction) }} {{ a.accountName }}（{{ a.amount.toFixed(2) }}）
           </div>
         </el-descriptions-item>
@@ -77,7 +80,11 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { deleteBill, getBill, billLogs } from '@/api/bill'
 import type { BillVO, BillLogVO } from '@/api/bill'
+import { listAccounts } from '@/api/account'
+import type { AccountVO } from '@/api/account'
+import { iconBg } from '@/utils/accountIcon'
 import BillFormDialog from '@/components/BillFormDialog.vue'
+import AppIcon from '@/components/AppIcon.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -87,6 +94,7 @@ const showForm = ref(false)
 const editing = ref<BillVO | null>(null)
 const billId = Number(route.params.id)
 const ledgerId = ref(0)
+const accountMap = ref(new Map<number, string>())
 
 const typeLabel = computed(() => {
   if (!bill.value) return ''
@@ -106,7 +114,11 @@ function directionLabel(d: string) {
   return d === 'out' ? '转出' : '转入'
 }
 function formatTime(t?: string) {
-  return t ? t.replace('T', ' ').slice(0, 16) : ''
+  // 时间精确到秒
+  return t ? t.replace('T', ' ').slice(0, 19) : ''
+}
+function accBg(accountId: number) {
+  return iconBg(accountMap.value.get(accountId))
 }
 function actionLabel(a: string) {
   return { create: '创建', update: '修改', delete: '删除' }[a] || a
@@ -119,12 +131,15 @@ async function load() {
   bill.value = await getBill(billId)
   ledgerId.value = bill.value.ledgerId
   logs.value = await billLogs(billId)
+  // 加载账户列表以建立 账户id → icon 映射
+  const list = await listAccounts(ledgerId.value).catch(() => [] as AccountVO[])
+  accountMap.value = new Map(list.map((a) => [a.id, a.icon ?? 'other'] as [number, string]))
 }
 
 async function onDelete() {
   await deleteBill(billId)
   ElMessage.success('已删除')
-  router.push(`/ledgers/${ledgerId.value}`)
+  router.push('/')
 }
 
 onMounted(load)
@@ -162,6 +177,19 @@ onMounted(load)
 }
 .acc-line {
   line-height: 1.8;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.acc-emoji {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 .logs-card {
   margin-top: 16px;
