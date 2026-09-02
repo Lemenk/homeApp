@@ -23,8 +23,6 @@ public class Account {
     private String name;
     /** 图标 key（对应前端 AppIcon 映射表，如 cash/wechat/alipay 等） */
     private String icon;
-    /** 初始余额 */
-    private BigDecimal initialBalance;
     /** 当前余额 */
     private BigDecimal balance;
     /** 账户分组（自由文本，如：日常、备用） */

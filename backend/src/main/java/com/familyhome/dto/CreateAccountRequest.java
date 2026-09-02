@@ -30,5 +30,6 @@ public class CreateAccountRequest {
     /** 是否计入总资产，默认 1 */
     private Integer includeInTotal;
 
-    private BigDecimal initialBalance;
+    /** 账户余额（新增时的初始值），默认 0 */
+    private BigDecimal balance;
 }

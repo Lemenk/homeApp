@@ -46,8 +46,7 @@ public class AccountService {
         account.setGroupName(req.getGroupName());
         account.setRemark(req.getRemark());
         account.setIncludeInTotal(req.getIncludeInTotal() == null ? 1 : req.getIncludeInTotal());
-        account.setInitialBalance(req.getInitialBalance() == null ? BigDecimal.ZERO : req.getInitialBalance());
-        account.setBalance(account.getInitialBalance());
+        account.setBalance(req.getBalance() == null ? BigDecimal.ZERO : req.getBalance());
         account.setStatus(1);
         account.setCreatedAt(LocalDateTime.now());
         accountMapper.insert(account);
@@ -147,7 +146,7 @@ public class AccountService {
 
     private AccountVO toVO(Account a) {
         return new AccountVO(a.getId(), a.getLedgerId(), a.getType(), a.getName(),
-            a.getIcon(), a.getInitialBalance(), a.getBalance(),
+            a.getIcon(), a.getBalance(),
             a.getGroupName(), a.getRemark(), a.getIncludeInTotal());
     }
 }

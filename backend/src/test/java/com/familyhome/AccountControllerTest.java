@@ -32,7 +32,7 @@ class AccountControllerTest extends ApiTestBase {
     private Long createAccount(String tk, Long ledgerId, String name, String type, String init) throws Exception {
         JsonNode node = objectMapper.readTree(mockMvc.perform(
                 postJson("/api/ledgers/" + ledgerId + "/accounts",
-                    "{\"name\":\"" + name + "\",\"type\":\"" + type + "\",\"initialBalance\":" + init + "}")
+                    "{\"name\":\"" + name + "\",\"type\":\"" + type + "\",\"balance\":" + init + "}")
                     .header("Authorization", "Bearer " + tk))
             .andReturn().getResponse().getContentAsString());
         return node.path("data").path("id").asLong();
@@ -43,11 +43,11 @@ class AccountControllerTest extends ApiTestBase {
         String tk = token("13800000060");
         Long ledgerId = createLedger(tk, "私账", "personal");
         mockMvc.perform(postJson("/api/ledgers/" + ledgerId + "/accounts",
-                "{\"name\":\"工资卡\",\"type\":\"asset\",\"initialBalance\":10000}")
+                "{\"name\":\"工资卡\",\"type\":\"asset\",\"balance\":10000}")
                 .header("Authorization", "Bearer " + tk))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.name").value("工资卡"))
-            .andExpect(jsonPath("$.data.initialBalance").value(10000))
+            .andExpect(jsonPath("$.data.balance").value(10000))
             .andExpect(jsonPath("$.data.balance").value(10000));
     }
 

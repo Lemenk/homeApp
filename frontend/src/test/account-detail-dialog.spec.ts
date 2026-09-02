@@ -24,7 +24,6 @@ const account = {
   type: 'asset' as const,
   name: '测试卡A',
   icon: 'cash',
-  initialBalance: 500,
   balance: 411.5,
   groupName: '日常',
   remark: '备注',
@@ -57,15 +56,16 @@ describe('AccountDetailDialog 账户详情/编辑', () => {
     expect(contents[1]).toBe('资金账户')
   })
 
-  it('查看模式展示账户其他信息（初始余额/备注/计入总资产）', async () => {
+  it('查看模式展示账户其他信息（备注/计入总资产）', async () => {
     const w = mountDialog()
     await nextTick()
     const labels = w.findAll('.el-descriptions__label').map((n) => n.text())
     const contents = w.findAll('.el-descriptions__content').map((n) => n.text())
-    expect(labels).toContain('初始余额')
+    expect(labels).not.toContain('初始余额')
     expect(labels).toContain('备注')
     expect(labels).toContain('计入总资产')
-    expect(contents[2]).toContain('500.00')
+    expect(contents[2]).toContain('备注')
+    expect(contents[3]).toContain('是')
   })
 
   it('编辑账户时账户分组为下拉框，选项为资金/信贷/储值', async () => {

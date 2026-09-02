@@ -21,7 +21,6 @@
       <el-descriptions :column="1" border>
         <el-descriptions-item label="余额">¥ {{ account.balance.toFixed(2) }}</el-descriptions-item>
         <el-descriptions-item label="账户分组">{{ typeLabel(account.type) }}</el-descriptions-item>
-        <el-descriptions-item label="初始余额">¥ {{ account.initialBalance.toFixed(2) }}</el-descriptions-item>
         <el-descriptions-item label="备注">{{ account.remark || '—' }}</el-descriptions-item>
         <el-descriptions-item label="计入总资产">{{ account.includeInTotal === 0 ? '否' : '是' }}</el-descriptions-item>
       </el-descriptions>

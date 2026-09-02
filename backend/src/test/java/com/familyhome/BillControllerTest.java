@@ -34,7 +34,7 @@ class BillControllerTest extends ApiTestBase {
     private Long createAccount(String tk, Long ledgerId, String name, String type, String balance) throws Exception {
         JsonNode node = objectMapper.readTree(mockMvc.perform(
                 postJson("/api/ledgers/" + ledgerId + "/accounts",
-                    "{\"name\":\"" + name + "\",\"type\":\"" + type + "\",\"initialBalance\":" + balance + "}")
+                    "{\"name\":\"" + name + "\",\"type\":\"" + type + "\",\"balance\":" + balance + "}")
                     .header("Authorization", "Bearer " + tk))
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
         return node.path("data").path("id").asLong();
@@ -300,7 +300,7 @@ class BillControllerTest extends ApiTestBase {
         // 创建带 icon key 的账户（如微信 → wechat）
         JsonNode acc = objectMapper.readTree(mockMvc.perform(
                 postJson("/api/ledgers/" + ledgerId + "/accounts",
-                    "{\"name\":\"微信\",\"type\":\"asset\",\"initialBalance\":500,\"icon\":\"wechat\"}")
+                    "{\"name\":\"微信\",\"type\":\"asset\",\"balance\":500,\"icon\":\"wechat\"}")
                     .header("Authorization", "Bearer " + tk))
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
         Long a = acc.path("data").path("id").asLong();

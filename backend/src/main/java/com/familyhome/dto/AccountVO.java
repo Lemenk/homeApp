@@ -15,7 +15,6 @@ public class AccountVO {
     private String type;
     private String name;
     private String icon;
-    private BigDecimal initialBalance;
     private BigDecimal balance;
     private String groupName;
     private String remark;

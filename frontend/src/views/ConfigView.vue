@@ -143,9 +143,9 @@
             <el-option value="stored_value" label="储值账户" />
           </el-select>
         </el-form-item>
-        <el-form-item label="初始余额">
+        <el-form-item label="余额">
           <div class="balance-wrap" :class="{ 'is-gray': accountForm.balanceDisabled }" @click="onAccountBalanceClick">
-            <el-input-number ref="accountBalanceInput" v-model="accountForm.initialBalance" :precision="2" :controls="false" style="width: 100%" :readonly="accountForm.balanceDisabled" @blur="onAccountBalanceBlur" />
+            <el-input-number ref="accountBalanceInput" v-model="accountForm.balance" :precision="2" :controls="false" style="width: 100%" :readonly="accountForm.balanceDisabled" @blur="onAccountBalanceBlur" />
           </div>
         </el-form-item>
       </el-form>
@@ -216,26 +216,26 @@ const ledgerForm = reactive({ name: '', type: 'personal' as 'personal' | 'public
 // 新增账户
 const showAccountDialog = ref(false)
 const creatingAccount = ref(false)
-const accountForm = reactive<{ name: string; type: AccountType; initialBalance: number | null; balanceDisabled: boolean }>({
+const accountForm = reactive<{ name: string; type: AccountType; balance: number | null; balanceDisabled: boolean }>({
   name: '',
   type: 'asset',
-  initialBalance: 0,
+  balance: 0,
   balanceDisabled: true,
 })
 
-/* 初始余额：默认置灰 0.00，点击置空可输入 */
+/* 余额：默认置灰 0.00，点击置空可输入 */
 const accountBalanceInput = ref()
 function onAccountBalanceClick() {
   if (accountForm.balanceDisabled) {
     accountForm.balanceDisabled = false
-    accountForm.initialBalance = null
+    accountForm.balance = null
     nextTick(() => accountBalanceInput.value?.focus())
   }
 }
 function onAccountBalanceBlur() {
-  const v = accountForm.initialBalance
+  const v = accountForm.balance
   if (v == null || v === 0) {
-    accountForm.initialBalance = 0
+    accountForm.balance = 0
     accountForm.balanceDisabled = true
   }
 }
@@ -290,7 +290,7 @@ function openAccountDialog() {
   }
   accountForm.name = ''
   accountForm.type = 'asset'
-  accountForm.initialBalance = 0
+  accountForm.balance = 0
   accountForm.balanceDisabled = true
   showAccountDialog.value = true
 }
@@ -352,7 +352,7 @@ async function submitAccount() {
     await createAccount(ledgerStore.currentLedgerId, {
       name: accountForm.name.trim(),
       type: accountForm.type,
-      initialBalance: accountForm.initialBalance || undefined,
+      balance: accountForm.balance || undefined,
     })
     ElMessage.success('账户已创建')
     showAccountDialog.value = false
@@ -412,7 +412,7 @@ onMounted(async () => {
   box-sizing: border-box;
 }
 
-/* 初始余额：默认置灰，点击置空 */
+/* 余额：默认置灰，点击置空 */
 .balance-wrap {
   cursor: pointer;
   width: 100%;

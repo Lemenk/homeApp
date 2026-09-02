@@ -80,7 +80,6 @@ CREATE TABLE IF NOT EXISTS t_account (
   type VARCHAR(16) NOT NULL COMMENT '账户类型：asset(资金)/credit(信贷)/stored_value(储值)',
   name VARCHAR(64) NOT NULL COMMENT '账户名称',
   icon VARCHAR(32) COMMENT '图标 key（对应前端 AppIcon 映射表）',
-  initial_balance DECIMAL(15,2) DEFAULT 0 COMMENT '初始余额',
   balance DECIMAL(15,2) DEFAULT 0 COMMENT '当前余额',
   group_name VARCHAR(32) COMMENT '账户分组（自由文本，如：日常/备用）',
   remark VARCHAR(255) COMMENT '备注',

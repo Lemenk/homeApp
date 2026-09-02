@@ -8,7 +8,6 @@ export interface AccountVO {
   type: AccountType
   name: string
   icon?: string
-  initialBalance: number
   balance: number
   groupName?: string
   remark?: string
@@ -40,7 +39,7 @@ export function createAccount(
   data: {
     name: string
     type: AccountType
-    initialBalance?: number
+    balance?: number
     icon?: string
     groupName?: string
     remark?: string
