@@ -10,6 +10,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -39,6 +40,10 @@ public abstract class ApiTestBase {
 
     protected MockHttpServletRequestBuilder postJson(String url, String body) {
         return post(url).contentType(MediaType.APPLICATION_JSON).content(body);
+    }
+
+    protected MockHttpServletRequestBuilder putJson(String url, String body) {
+        return put(url).contentType(MediaType.APPLICATION_JSON).content(body);
     }
 
     protected MockHttpServletRequestBuilder getAuth(String url, String token) {

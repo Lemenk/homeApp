@@ -5,6 +5,7 @@ import com.familyhome.common.BizException;
 import com.familyhome.dto.AccountVO;
 import com.familyhome.dto.AdjustBalanceRequest;
 import com.familyhome.dto.CreateAccountRequest;
+import com.familyhome.dto.UpdateAccountRequest;
 import com.familyhome.entity.Account;
 import com.familyhome.entity.AccountBalanceLog;
 import com.familyhome.mapper.AccountBalanceLogMapper;
@@ -83,6 +84,38 @@ public class AccountService {
         log.setOperatorId(userId);
         log.setCreatedAt(LocalDateTime.now());
         balanceLogMapper.insert(log);
+        return toVO(account);
+    }
+
+    /** 更新账户基本信息；余额发生变化时记录余额调整日志 */
+    @Transactional
+    public AccountVO update(Long userId, Long accountId, UpdateAccountRequest req) {
+        Account account = getOwned(userId, accountId);
+        account.setName(req.getName());
+        if (req.getType() != null && !req.getType().isBlank()) {
+            account.setType(req.getType());
+        }
+        // 分组/备注仅在有值时更新，避免未传时误清空已有数据
+        if (req.getGroupName() != null) {
+            account.setGroupName(req.getGroupName());
+        }
+        if (req.getRemark() != null) {
+            account.setRemark(req.getRemark());
+        }
+        account.setIncludeInTotal(req.getIncludeInTotal() == null ? account.getIncludeInTotal() : req.getIncludeInTotal());
+        if (req.getBalance() != null && req.getBalance().compareTo(account.getBalance()) != 0) {
+            BigDecimal oldBalance = account.getBalance();
+            account.setBalance(req.getBalance());
+            AccountBalanceLog log = new AccountBalanceLog();
+            log.setAccountId(accountId);
+            log.setOldBalance(oldBalance);
+            log.setNewBalance(req.getBalance());
+            log.setReason("编辑账户修改余额");
+            log.setOperatorId(userId);
+            log.setCreatedAt(LocalDateTime.now());
+            balanceLogMapper.insert(log);
+        }
+        accountMapper.updateById(account);
         return toVO(account);
     }
 

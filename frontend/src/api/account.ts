@@ -65,3 +65,17 @@ export function adjustBalance(
 ): Promise<AccountVO> {
   return http.post(`/accounts/${accountId}/balance`, data)
 }
+
+export function updateAccount(
+  accountId: number,
+  data: {
+    name: string
+    type?: AccountType
+    groupName?: string
+    remark?: string
+    includeInTotal?: number
+    balance?: number
+  }
+): Promise<AccountVO> {
+  return http.put(`/accounts/${accountId}`, data)
+}

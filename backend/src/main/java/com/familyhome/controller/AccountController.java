@@ -4,6 +4,7 @@ import com.familyhome.common.Result;
 import com.familyhome.dto.AccountVO;
 import com.familyhome.dto.AdjustBalanceRequest;
 import com.familyhome.dto.CreateAccountRequest;
+import com.familyhome.dto.UpdateAccountRequest;
 import com.familyhome.entity.Account;
 import com.familyhome.security.UserContext;
 import com.familyhome.service.AccountService;
@@ -11,6 +12,7 @@ import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -48,5 +50,11 @@ public class AccountController {
     public Result<AccountVO> adjustBalance(@PathVariable Long id,
                                            @Valid @RequestBody AdjustBalanceRequest req) {
         return Result.ok(accountService.adjustBalance(UserContext.require(), id, req));
+    }
+
+    @PutMapping("/accounts/{id}")
+    public Result<AccountVO> update(@PathVariable Long id,
+                                    @Valid @RequestBody UpdateAccountRequest req) {
+        return Result.ok(accountService.update(UserContext.require(), id, req));
     }
 }

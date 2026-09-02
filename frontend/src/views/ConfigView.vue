@@ -61,8 +61,10 @@
         <div class="col-body">
           <div v-for="group in groupedAccounts" :key="group.type" class="account-group">
             <div class="group-label">{{ typeLabel(group.type) }}</div>
-            <div v-for="a in group.accounts" :key="a.id" class="item-card">
-              <div class="item-icon">💳</div>
+            <div v-for="a in group.accounts" :key="a.id" class="item-card" @click="openAccountDetail(a)">
+              <div class="item-icon" :style="{ background: iconBg(a.icon) }">
+                <AppIcon :icon="a.icon" :size="20" />
+              </div>
               <div class="item-main">
                 <div class="item-name">{{ a.name }}</div>
                 <div class="item-desc">{{ a.groupName || '默认分组' }}</div>
@@ -174,6 +176,9 @@
         <el-button type="primary" :loading="creatingCategory" @click="submitCategory">创建</el-button>
       </template>
     </el-dialog>
+
+    <!-- 账户详情 / 编辑（公共组件） -->
+    <AccountDetailDialog v-model="showAccountDetail" :account="detailAccount" @saved="loadAccounts" />
   </div>
 </template>
 
@@ -187,6 +192,9 @@ import type { CategoryVO } from '@/api/ledger'
 import type { LedgerVO } from '@/types'
 import { listAccounts, createAccount, ACCOUNT_TYPE_LABELS, ACCOUNT_TYPE_ORDER } from '@/api/account'
 import type { AccountVO, AccountType } from '@/api/account'
+import { iconBg } from '@/utils/accountIcon'
+import AppIcon from '@/components/AppIcon.vue'
+import AccountDetailDialog from '@/components/AccountDetailDialog.vue'
 
 const ledgerStore = useLedgerStore()
 const registerRefresh = inject<(fn: () => Promise<void>) => void>('registerRefresh')
@@ -250,6 +258,14 @@ const filteredCategories = computed(() =>
 
 function typeLabel(t: AccountType): string {
   return ACCOUNT_TYPE_LABELS[t] || t
+}
+
+/* 账户详情 / 编辑 */
+const showAccountDetail = ref(false)
+const detailAccount = ref<AccountVO | null>(null)
+function openAccountDetail(a: AccountVO) {
+  detailAccount.value = a
+  showAccountDetail.value = true
 }
 
 function switchLedger(id: number) {
@@ -476,6 +492,7 @@ onMounted(async () => {
   background: #fafbfc;
   border: 1px solid transparent;
   transition: all 0.15s;
+  cursor: pointer;
 }
 .item-card:hover {
   background: #f0f2f5;

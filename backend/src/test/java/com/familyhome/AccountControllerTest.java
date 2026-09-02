@@ -104,6 +104,51 @@ class AccountControllerTest extends ApiTestBase {
     }
 
     @Test
+    void updateAccount_modifiesFieldsAndBalance() throws Exception {
+        String tk = token("13800000068");
+        Long ledgerId = createLedger(tk, "私账", "personal");
+        Long a = createAccount(tk, ledgerId, "卡", "asset", "1000");
+
+        mockMvc.perform(putJson("/api/accounts/" + a,
+                "{\"name\":\"工资卡\",\"type\":\"credit\",\"groupName\":\"日常\",\"remark\":\"每月工资\",\"includeInTotal\":0,\"balance\":1200}")
+                .header("Authorization", "Bearer " + tk))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.name").value("工资卡"))
+            .andExpect(jsonPath("$.data.type").value("credit"))
+            .andExpect(jsonPath("$.data.groupName").value("日常"))
+            .andExpect(jsonPath("$.data.remark").value("每月工资"))
+            .andExpect(jsonPath("$.data.includeInTotal").value(0))
+            .andExpect(jsonPath("$.data.balance").value(1200));
+    }
+
+    @Test
+    void updateAccount_withoutBalance_keepsBalance() throws Exception {
+        String tk = token("13800000069");
+        Long ledgerId = createLedger(tk, "私账", "personal");
+        Long a = createAccount(tk, ledgerId, "卡", "asset", "1000");
+
+        mockMvc.perform(putJson("/api/accounts/" + a,
+                "{\"name\":\"卡A\",\"groupName\":\"备用\"}")
+                .header("Authorization", "Bearer " + tk))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.name").value("卡A"))
+            .andExpect(jsonPath("$.data.balance").value(1000))
+            .andExpect(jsonPath("$.data.groupName").value("备用"));
+    }
+
+    @Test
+    void updateAccount_otherUser_forbidden() throws Exception {
+        String tk = token("13800000070");
+        String other = token("13800000071");
+        Long ledgerId = createLedger(tk, "私账", "personal");
+        Long a = createAccount(tk, ledgerId, "卡", "asset", "100");
+
+        mockMvc.perform(putJson("/api/accounts/" + a, "{\"name\":\"改名\"}")
+                .header("Authorization", "Bearer " + other))
+            .andExpect(status().isForbidden());
+    }
+
+    @Test
     void summary_calculatesAssetsLiabilityNet() throws Exception {
         String tk = token("13800000066");
         Long ledgerId = createLedger(tk, "私账", "personal");

@@ -16,7 +16,6 @@ const router = createRouter({
         { path: '', name: 'home', component: () => import('@/views/HomeView.vue') },
         { path: 'config', name: 'config', component: () => import('@/views/ConfigView.vue') },
         { path: 'bills/:id', name: 'bill-detail', component: () => import('@/views/BillDetailView.vue') },
-        { path: 'accounts', name: 'accounts', component: () => import('@/views/AccountsView.vue') },
         { path: 'statistics', name: 'statistics', component: () => import('@/views/StatisticsView.vue') },
         {
           path: 'ledgers/:id/settings',

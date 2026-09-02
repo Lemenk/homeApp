@@ -142,21 +142,6 @@
 
           <div class="record-hint">选择类型、金额、分类即可快速记录</div>
         </div>
-
-        <!-- 账户概览小卡片 -->
-        <div class="accounts-card" v-if="accounts.length">
-          <div class="panel-header">
-            <span class="panel-title">账户概览</span>
-            <el-button text type="primary" size="small" @click="$router.push('/accounts')">管理</el-button>
-          </div>
-          <div class="acc-mini-list">
-            <div v-for="a in accounts.slice(0, 4)" :key="a.id" class="acc-mini-row">
-              <div class="acc-mini-icon"><AppIcon :icon="a.icon" :size="20" /></div>
-              <div class="acc-mini-name">{{ a.name }}</div>
-              <div class="acc-mini-balance">{{ a.balance.toFixed(2) }}</div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -650,48 +635,6 @@ onMounted(async () => {
   font-size: 12px;
   color: #c0c4cc;
   margin-top: 10px;
-}
-
-/* 账户概览小卡片 */
-.accounts-card {
-  background: #fff;
-  border-radius: 12px;
-  padding: 16px 20px;
-}
-.acc-mini-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.acc-mini-row {
-  display: flex;
-  align-items: center;
-  padding: 6px 4px;
-  border-radius: 6px;
-}
-.acc-mini-row:hover {
-  background: #f5f7fa;
-}
-.acc-mini-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  background: #f0f2f5;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  margin-right: 10px;
-}
-.acc-mini-name {
-  flex: 1;
-  font-size: 13px;
-  color: #303133;
-}
-.acc-mini-balance {
-  font-size: 13px;
-  font-weight: 600;
-  color: #606266;
 }
 
 /* 移动端适配：左右分栏改为纵向堆叠 */
