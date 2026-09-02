@@ -60,6 +60,9 @@
             <el-tag :type="actionTagType(log.action)" size="small" effect="dark" class="log-action">
               {{ actionLabel(log.action) }}
             </el-tag>
+            <span v-if="log.accountIcons && log.accountIcons.length" class="log-icons">
+              <AppIcon v-for="(ic, idx) in log.accountIcons" :key="idx" :icon="ic" :size="14" />
+            </span>
             <span class="log-summary">{{ log.summary || '—' }}</span>
             <div class="log-meta">
               <span class="log-operator">操作人：{{ log.operatorName || '未知' }}</span>
@@ -211,6 +214,13 @@ onMounted(load)
 }
 .log-action {
   margin-right: 8px;
+  vertical-align: middle;
+}
+.log-icons {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: 6px;
   vertical-align: middle;
 }
 .log-summary {

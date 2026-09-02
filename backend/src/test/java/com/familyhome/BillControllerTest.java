@@ -294,6 +294,33 @@ class BillControllerTest extends ApiTestBase {
     }
 
     @Test
+    void billLogs_returnAccountIcons() throws Exception {
+        String tk = token("13800000051");
+        Long ledgerId = createPersonalLedger(tk, "私账");
+        // 创建带 icon key 的账户（如微信 → wechat）
+        JsonNode acc = objectMapper.readTree(mockMvc.perform(
+                postJson("/api/ledgers/" + ledgerId + "/accounts",
+                    "{\"name\":\"微信\",\"type\":\"asset\",\"initialBalance\":500,\"icon\":\"wechat\"}")
+                    .header("Authorization", "Bearer " + tk))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+        Long a = acc.path("data").path("id").asLong();
+        Long cat = firstExpenseCategory(tk, ledgerId);
+
+        JsonNode bill = objectMapper.readTree(mockMvc.perform(
+                postJson("/api/ledgers/" + ledgerId + "/bills",
+                    "{\"type\":\"expense\",\"categoryId\":" + cat + ",\"amount\":100," +
+                    "\"items\":[{\"accountId\":" + a + ",\"direction\":\"out\",\"amount\":100}]}")
+                    .header("Authorization", "Bearer " + tk))
+            .andReturn().getResponse().getContentAsString());
+        Long billId = bill.path("data").path("id").asLong();
+
+        // 操作留痕应携带账户 icon key，供前端渲染 AppIcon
+        mockMvc.perform(get("/api/bills/" + billId + "/logs").header("Authorization", "Bearer " + tk))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data[0].accountIcons[0]").value("wechat"));
+    }
+
+    @Test
     void liabilityAccount_expense_increasesDebt() throws Exception {
         String tk = token("13800000050");
         Long ledgerId = createPersonalLedger(tk, "私账");

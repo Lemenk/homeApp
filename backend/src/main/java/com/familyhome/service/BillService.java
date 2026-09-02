@@ -464,6 +464,9 @@ public class BillService {
         }
     }
 
+    /** 摘要解析结果：人可读文本 + 涉及账户的 icon keys */
+    private record LogSummary(String text, List<String> accountIcons) {}
+
     /** 把审计日志转成详情页展示用的 VO：补充操作人昵称 + 生成可读摘要 */
     private BillLogVO toLogVO(AuditLog log) {
         String operatorName = "";
@@ -474,14 +477,14 @@ public class BillService {
                 operatorName = "";
             }
         }
-        return new BillLogVO(log.getId(), log.getAction(), operatorName,
-            buildLogSummary(log.getChangeDetail()), log.getCreatedAt());
+        LogSummary s = buildLogSummary(log.getChangeDetail());
+        return new BillLogVO(log.getId(), log.getAction(), operatorName, s.text(), s.accountIcons(), log.getCreatedAt());
     }
 
-    /** 从 changeDetail JSON 生成人可读的摘要，如「支出 ¥30.00 · 微信 · 午餐」 */
-    private String buildLogSummary(String changeDetail) {
+    /** 从 changeDetail JSON 生成人可读的摘要，如「支出 ¥30.00 · 微信 · 午餐」，同时收集涉及账户的 icon key */
+    private LogSummary buildLogSummary(String changeDetail) {
         if (changeDetail == null || changeDetail.isBlank()) {
-            return "";
+            return new LogSummary("", List.of());
         }
         try {
             Map<String, Object> d = objectMapper.readValue(changeDetail, new TypeReference<Map<String, Object>>() { });
@@ -503,6 +506,7 @@ public class BillService {
             if (d.get("amount") != null) {
                 sb.append(" ¥").append(new BigDecimal(d.get("amount").toString()).stripTrailingZeros().toPlainString());
             }
+            List<String> icons = new ArrayList<>();
             Object accountsObj = d.get("accounts");
             if (accountsObj instanceof List<?> accounts && !accounts.isEmpty()) {
                 List<String> names = new ArrayList<>();
@@ -511,6 +515,9 @@ public class BillService {
                         Account acc = accountMapper.selectById(Long.valueOf(m.get("accountId").toString()));
                         if (acc != null) {
                             names.add(acc.getName());
+                            if (acc.getIcon() != null && !acc.getIcon().isBlank()) {
+                                icons.add(acc.getIcon());
+                            }
                         }
                     }
                 }
@@ -521,9 +528,9 @@ public class BillService {
             if (d.get("remark") != null && !d.get("remark").toString().isBlank()) {
                 sb.append(" · ").append(d.get("remark"));
             }
-            return sb.toString();
+            return new LogSummary(sb.toString(), icons);
         } catch (Exception e) {
-            return changeDetail;
+            return new LogSummary(changeDetail, List.of());
         }
     }
 }

@@ -98,7 +98,7 @@
               </div>
               <div class="bill-right">
                 <div v-for="a in b.accounts" :key="a.accountId" class="bill-account">
-                  <span class="acc-emoji" :style="{ background: accBg(a.accountId) }">{{ accEmoji(a.accountId) }}</span>
+                  <AppIcon :icon="accountIconOf(a.accountId)" :size="16" />
                   <span class="acc-name">{{ a.accountName }}</span>
                 </div>
                 <div class="bill-amount" :class="b.type">{{ amountText(b) }}</div>
@@ -151,7 +151,7 @@
           </div>
           <div class="acc-mini-list">
             <div v-for="a in accounts.slice(0, 4)" :key="a.id" class="acc-mini-row">
-              <div class="acc-mini-icon">{{ a.icon ? '💳' : '🏦' }}</div>
+              <div class="acc-mini-icon"><AppIcon :icon="a.icon" :size="20" /></div>
               <div class="acc-mini-name">{{ a.name }}</div>
               <div class="acc-mini-balance">{{ a.balance.toFixed(2) }}</div>
             </div>
@@ -174,8 +174,8 @@ import { listAccounts, summary } from '@/api/account'
 import type { AccountVO } from '@/api/account'
 import { useLedgerStore } from '@/stores/ledger'
 import BillFormDialog from '@/components/BillFormDialog.vue'
+import AppIcon from '@/components/AppIcon.vue'
 import { groupBillsByDay, monthStats, parseBillDateTime } from '@/utils/billStats'
-import { iconEmoji as accountEmoji, iconBg as accountBg } from '@/utils/accountIcon'
 import { categoryEmoji, isKnownCategoryIcon } from '@/utils/categoryIcon'
 
 const ledgerStore = useLedgerStore()
@@ -230,11 +230,8 @@ const accountIconMap = computed(() => {
   for (const a of accounts.value) m.set(a.id, a.icon ?? 'other')
   return m
 })
-function accEmoji(accountId: number) {
-  return accountEmoji(accountIconMap.value.get(accountId))
-}
-function accBg(accountId: number) {
-  return accountBg(accountIconMap.value.get(accountId))
+function accountIconOf(accountId: number): string | undefined {
+  return accountIconMap.value.get(accountId)
 }
 
 function amountText(b: BillVO): string {
@@ -558,16 +555,6 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 4px;
-}
-.acc-emoji {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  font-size: 11px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
 }
 .acc-name {
   font-size: 12px;

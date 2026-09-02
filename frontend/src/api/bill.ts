@@ -31,6 +31,7 @@ export interface BillLogVO {
   action: 'create' | 'update' | 'delete'
   operatorName: string
   summary: string
+  accountIcons?: string[]
   createdAt: string
 }
 
