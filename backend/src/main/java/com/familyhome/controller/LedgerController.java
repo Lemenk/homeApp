@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/** 账本接口：账本列表、创建、详情、删除、切换默认账本、成员管理 */
 @RestController
 @RequestMapping("/api/ledgers")
 public class LedgerController {
@@ -28,28 +29,32 @@ public class LedgerController {
         this.ledgerService = ledgerService;
     }
 
+    /** 查询当前用户可见的账本列表 */
     @GetMapping
     public Result<List<LedgerVO>> list() {
         return Result.ok(ledgerService.listLedgers(UserContext.require()));
     }
 
+    /** 创建账本（个人账本或家庭公共账本） */
     @PostMapping
     public Result<LedgerVO> create(@Valid @RequestBody CreateLedgerRequest req) {
         return Result.ok(ledgerService.createLedger(UserContext.require(), req));
     }
 
+    /** 查询账本详情（含成员） */
     @GetMapping("/{id}")
     public Result<LedgerVO> get(@PathVariable Long id) {
         return Result.ok(ledgerService.getLedger(UserContext.require(), id));
     }
 
+    /** 删除账本（仅创建者） */
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
         ledgerService.deleteLedger(UserContext.require(), id);
         return Result.ok();
     }
 
-    /** 切换默认账本 */
+    /** 切换默认账本（首页默认展示该账本数据） */
     @PutMapping("/{id}/default")
     public Result<LedgerVO> setDefault(@PathVariable Long id) {
         return Result.ok(ledgerService.setDefaultLedger(UserContext.require(), id));

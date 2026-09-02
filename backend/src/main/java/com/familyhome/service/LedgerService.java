@@ -34,6 +34,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * 账本服务：账本的创建/查询/删除/默认切换、成员管理，
+ * 以及新用户自动创建默认"个人账本"、初始化默认分类等。
+ */
 @Service
 public class LedgerService {
 
@@ -81,6 +85,7 @@ public class LedgerService {
         this.userMapper = userMapper;
     }
 
+    /** 创建账本：个人账本私有、公共账本关联家庭，并初始化默认分类与账户 */
     @Transactional
     public LedgerVO createLedger(Long userId, CreateLedgerRequest req) {
         Ledger ledger = new Ledger();
@@ -117,6 +122,7 @@ public class LedgerService {
         return toVO(ledger, userId);
     }
 
+    /** 查询当前用户可见的账本列表 */
     public List<LedgerVO> listLedgers(Long userId) {
         List<LedgerMember> lms = ledgerMemberMapper.selectList(
             Wrappers.<LedgerMember>lambdaQuery().eq(LedgerMember::getUserId, userId));
@@ -179,6 +185,7 @@ public class LedgerService {
         return toVO(target, userId);
     }
 
+    /** 查询账本详情（含成员，仅成员可见） */
     public LedgerVO getLedger(Long userId, Long ledgerId) {
         requireMember(ledgerId, userId);
         Ledger ledger = ledgerMapper.selectById(ledgerId);
@@ -189,6 +196,7 @@ public class LedgerService {
     }
 
     @Transactional
+    /** 删除账本：级联清理成员、分类、标签、账户、账单、预算等数据（仅创建者） */
     public void deleteLedger(Long userId, Long ledgerId) {
         Ledger ledger = ledgerMapper.selectById(ledgerId);
         if (ledger == null) {
@@ -221,6 +229,7 @@ public class LedgerService {
         ledgerMapper.deleteById(ledgerId);
     }
 
+    /** 校验用户是账本成员，否则抛 403 */
     public void requireMember(Long ledgerId, Long userId) {
         Long count = ledgerMemberMapper.selectCount(
             Wrappers.<LedgerMember>lambdaQuery()
@@ -231,6 +240,7 @@ public class LedgerService {
         }
     }
 
+    /** 校验用户是账本创建者，否则抛 403 */
     public void requireCreator(Long ledgerId, Long userId) {
         LedgerMember lm = ledgerMemberMapper.selectOne(
             Wrappers.<LedgerMember>lambdaQuery()

@@ -14,6 +14,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
+/** 统计接口：收支趋势统计、分类占比统计 */
 @RestController
 @RequestMapping("/api")
 public class StatisticsController {
@@ -24,6 +25,7 @@ public class StatisticsController {
         this.statisticsService = statisticsService;
     }
 
+    /** 收支趋势统计：按日/月/年分组，输出区间内各期收入与支出 */
     @GetMapping("/ledgers/{ledgerId}/statistics/trend")
     public Result<List<Map<String, Object>>> trend(
         @PathVariable Long ledgerId,
@@ -33,6 +35,7 @@ public class StatisticsController {
         return Result.ok(statisticsService.trend(UserContext.require(), ledgerId, startDate, endDate, groupBy));
     }
 
+    /** 分类统计：按支出/收入类型分组，输出各分类金额与占比 */
     @GetMapping("/ledgers/{ledgerId}/statistics/category")
     public Result<List<Map<String, Object>>> category(
         @PathVariable Long ledgerId,

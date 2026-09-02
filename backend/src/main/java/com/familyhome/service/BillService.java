@@ -40,6 +40,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 账单服务：账单的增删改查、账户余额联动、转账配对、审计留痕。
+ * 涉及金额变动的操作（新增/更新/删除）会同步调整关联账户余额并写入操作留痕。
+ */
 @Service
 public class BillService {
 
@@ -74,6 +78,7 @@ public class BillService {
         this.objectMapper = objectMapper;
     }
 
+    /** 新增账单：校验成员资格，写入账户明细并联动余额，记录创建留痕 */
     @Transactional
     public BillVO createBill(Long userId, BillRequest req) {
         ledgerService.requireMember(req.getLedgerId(), userId);
@@ -110,6 +115,7 @@ public class BillService {
         return toVO(bill);
     }
 
+    /** 更新账单：回滚原明细余额影响后按新明细重算，记录更新留痕 */
     @Transactional
     public BillVO updateBill(Long userId, Long billId, BillRequest req) {
         Bill old = requireBill(billId);
@@ -158,6 +164,7 @@ public class BillService {
         return toVO(old);
     }
 
+    /** 删除账单：回滚账户余额影响，记录删除留痕 */
     @Transactional
     public void deleteBill(Long userId, Long billId) {
         Bill bill = requireBill(billId);
@@ -174,6 +181,7 @@ public class BillService {
         billTagMapper.delete(Wrappers.<BillTag>lambdaQuery().eq(BillTag::getBillId, billId));
     }
 
+    /** 分页查询账单（支持类型/分类/账户/时间范围/关键词过滤） */
     public PageResult<BillVO> listBills(Long userId, Long ledgerId, BillQuery q) {
         ledgerService.requireMember(ledgerId, userId);
         LambdaQueryWrapper<Bill> w = Wrappers.<Bill>lambdaQuery().eq(Bill::getLedgerId, ledgerId);
@@ -228,12 +236,14 @@ public class BillService {
         return new PageResult<>(vos, p.getTotal(), page, size);
     }
 
+    /** 查询账单详情（含分类、账户明细、标签） */
     public BillVO getBill(Long userId, Long billId) {
         Bill bill = requireBill(billId);
         ledgerService.requireMember(bill.getLedgerId(), userId);
         return toVO(bill);
     }
 
+    /** 查询账单操作留痕（含操作人昵称与可读摘要） */
     public List<BillLogVO> billLogs(Long userId, Long billId) {
         Bill bill = requireBill(billId);
         ledgerService.requireMember(bill.getLedgerId(), userId);

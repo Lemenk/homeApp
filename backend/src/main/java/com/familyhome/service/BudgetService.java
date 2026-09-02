@@ -22,6 +22,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/** 预算服务：预算的增删改查，及预算使用进度（已用金额/超支判断）计算 */
 @Service
 public class BudgetService {
 
@@ -38,6 +39,7 @@ public class BudgetService {
         this.ledgerService = ledgerService;
     }
 
+    /** 新增预算：同一分类仅允许一条预算，自定义周期需校验起止日期 */
     @Transactional
     public Map<String, Object> create(Long userId, Long ledgerId, CreateBudgetRequest req) {
         ledgerService.requireMember(ledgerId, userId);
@@ -72,6 +74,7 @@ public class BudgetService {
         return toVO(b);
     }
 
+    /** 更新预算（排除自身后校验分类唯一性） */
     @Transactional
     public Map<String, Object> update(Long userId, Long budgetId, CreateBudgetRequest req) {
         Budget old = budgetMapper.selectById(budgetId);
@@ -112,6 +115,7 @@ public class BudgetService {
         return toVO(old);
     }
 
+    /** 删除预算 */
     @Transactional
     public void delete(Long userId, Long budgetId) {
         Budget b = budgetMapper.selectById(budgetId);
@@ -122,6 +126,7 @@ public class BudgetService {
         budgetMapper.deleteById(budgetId);
     }
 
+    /** 查询账本预算列表（含分类名/图标、已用金额、进度百分比） */
     public List<Map<String, Object>> list(Long userId, Long ledgerId) {
         ledgerService.requireMember(ledgerId, userId);
         List<Budget> budgets = budgetMapper.selectList(

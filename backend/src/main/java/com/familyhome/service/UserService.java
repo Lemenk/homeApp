@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 
+/** 用户服务：用户查询与注册 */
 @Service
 public class UserService {
 
@@ -17,6 +18,7 @@ public class UserService {
         this.userMapper = userMapper;
     }
 
+    /** 按 ID 查询用户 */
     public User getById(Long id) {
         User user = userMapper.selectById(id);
         if (user == null) {
@@ -25,6 +27,7 @@ public class UserService {
         return user;
     }
 
+    /** 按手机号查询用户 */
     public User findByPhone(String phone) {
         return userMapper.selectOne(Wrappers.<User>lambdaQuery().eq(User::getPhone, phone));
     }

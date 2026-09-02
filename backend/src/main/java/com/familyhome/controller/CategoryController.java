@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/** 分类接口：支出/收入分类的列表、新增、更新、启用/停用、删除 */
 @RestController
 @RequestMapping("/api")
 public class CategoryController {
@@ -28,27 +29,32 @@ public class CategoryController {
         this.categoryService = categoryService;
     }
 
+    /** 查询账本下的分类列表 */
     @GetMapping("/ledgers/{ledgerId}/categories")
     public Result<List<Category>> list(@PathVariable Long ledgerId) {
         return Result.ok(categoryService.list(UserContext.require(), ledgerId));
     }
 
+    /** 新增分类 */
     @PostMapping("/ledgers/{ledgerId}/categories")
     public Result<Category> create(@PathVariable Long ledgerId,
                                    @Valid @RequestBody CategoryRequest req) {
         return Result.ok(categoryService.create(UserContext.require(), ledgerId, req));
     }
 
+    /** 更新分类（名称/图标/排序） */
     @PutMapping("/categories/{id}")
     public Result<Category> update(@PathVariable Long id, @Valid @RequestBody CategoryRequest req) {
         return Result.ok(categoryService.update(UserContext.require(), id, req));
     }
 
+    /** 启用/停用分类 */
     @PutMapping("/categories/{id}/toggle")
     public Result<Category> toggle(@PathVariable Long id, @RequestParam boolean enabled) {
         return Result.ok(categoryService.toggle(UserContext.require(), id, enabled));
     }
 
+    /** 删除分类 */
     @DeleteMapping("/categories/{id}")
     public Result<Void> delete(@PathVariable Long id) {
         categoryService.delete(UserContext.require(), id);

@@ -19,6 +19,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/** 账户服务：账户的增删改查、余额调整与资产汇总 */
 @Service
 public class AccountService {
 
@@ -33,6 +34,7 @@ public class AccountService {
         this.ledgerService = ledgerService;
     }
 
+    /** 新增账户：校验账本成员资格，初始余额即为当前余额 */
     @Transactional
     public AccountVO create(Long userId, Long ledgerId, CreateAccountRequest req) {
         ledgerService.requireMember(ledgerId, userId);
@@ -52,6 +54,7 @@ public class AccountService {
         return toVO(account);
     }
 
+    /** 查询账本下的账户列表（按类型、ID 排序） */
     public List<Account> list(Long userId, Long ledgerId) {
         ledgerService.requireMember(ledgerId, userId);
         return accountMapper.selectList(
@@ -60,6 +63,7 @@ public class AccountService {
                 .orderByAsc(Account::getType, Account::getId));
     }
 
+    /** 获取账户并校验归属（须为账本成员） */
     public Account getOwned(Long userId, Long accountId) {
         Account account = accountMapper.selectById(accountId);
         if (account == null) {
@@ -69,6 +73,7 @@ public class AccountService {
         return account;
     }
 
+    /** 调整账户余额：更新余额并写入余额调整留痕 */
     @Transactional
     public AccountVO adjustBalance(Long userId, Long accountId, AdjustBalanceRequest req) {
         Account account = getOwned(userId, accountId);

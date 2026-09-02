@@ -7,6 +7,7 @@ import com.familyhome.dto.UserVO;
 import com.familyhome.entity.User;
 import org.springframework.stereotype.Service;
 
+/** 认证服务：验证码发送、手机号登录（含新用户自动建默认账本）、当前用户查询 */
 @Service
 public class AuthService {
 
@@ -23,10 +24,15 @@ public class AuthService {
         this.ledgerService = ledgerService;
     }
 
+    /** 发送短信验证码 */
     public void sendCode(String phone) {
         smsCodeService.sendCode(phone);
     }
 
+    /**
+     * 手机号验证码登录。
+     * 新用户自动注册，并创建默认"个人账本"；返回 JWT 令牌与用户信息。
+     */
     public LoginResponse loginByPhone(String phone, String code) {
         if (!smsCodeService.verifyCode(phone, code)) {
             throw BizException.badRequest("验证码错误或已过期");
@@ -42,6 +48,7 @@ public class AuthService {
         return new LoginResponse(token, UserVO.from(user));
     }
 
+    /** 查询当前登录用户信息 */
     public UserVO me(Long userId) {
         return UserVO.from(userService.getById(userId));
     }

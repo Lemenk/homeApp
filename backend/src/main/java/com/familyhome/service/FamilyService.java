@@ -17,6 +17,7 @@ import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/** 家庭服务：家庭的创建、查询、成员管理、邀请码生成/加入 */
 @Service
 public class FamilyService {
 
@@ -35,6 +36,7 @@ public class FamilyService {
         this.ledgerService = ledgerService;
     }
 
+    /** 创建家庭（当前用户成为户主，一人仅限一个家庭） */
     @Transactional
     public FamilyVO createFamily(Long userId, String name) {
         if (findMyFamilyId(userId) != null) {
@@ -50,12 +52,14 @@ public class FamilyService {
         return toVO(family, userId);
     }
 
+    /** 查询用户所属家庭 ID（无则返回 null） */
     public Long findMyFamilyId(Long userId) {
         FamilyMember fm = familyMemberMapper.selectOne(
             Wrappers.<FamilyMember>lambdaQuery().eq(FamilyMember::getUserId, userId).last("limit 1"));
         return fm == null ? null : fm.getFamilyId();
     }
 
+    /** 查询我的家庭信息（无家庭返回 null） */
     public FamilyVO myFamily(Long userId) {
         Long familyId = findMyFamilyId(userId);
         if (familyId == null) {
@@ -68,6 +72,7 @@ public class FamilyService {
         return toVO(family, userId);
     }
 
+    /** 查询家庭成员列表（须为家庭成员） */
     public List<MemberVO> members(Long userId, Long familyId) {
         requireMember(familyId, userId);
         List<FamilyMember> fms = familyMemberMapper.selectList(
@@ -80,6 +85,7 @@ public class FamilyService {
         }).toList();
     }
 
+    /** 刷新家庭邀请码（旧码作废，仅户主） */
     public String refreshInviteCode(Long userId, Long familyId) {
         requireCreator(familyId, userId);
         Family family = familyMapper.selectById(familyId);
@@ -91,6 +97,7 @@ public class FamilyService {
         return family.getInviteCode();
     }
 
+    /** 通过邀请码加入家庭，并自动加入该家庭的全部公共账本 */
     @Transactional
     public FamilyVO joinByCode(Long userId, String code) {
         if (findMyFamilyId(userId) != null) {
@@ -107,6 +114,7 @@ public class FamilyService {
         return toVO(family, userId);
     }
 
+    /** 校验用户是家庭成员，否则抛 403 */
     public void requireMember(Long familyId, Long userId) {
         Long count = familyMemberMapper.selectCount(
             Wrappers.<FamilyMember>lambdaQuery()
@@ -117,6 +125,7 @@ public class FamilyService {
         }
     }
 
+    /** 校验用户是家庭户主，否则抛 403 */
     public void requireCreator(Long familyId, Long userId) {
         FamilyMember fm = familyMemberMapper.selectOne(
             Wrappers.<FamilyMember>lambdaQuery()

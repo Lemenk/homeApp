@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/** 统计服务：收支趋势聚合与分类占比统计 */
 @Service
 public class StatisticsService {
 

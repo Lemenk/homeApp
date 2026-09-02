@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/** 标签服务：标签的增删改查（仅账本创建者可管理） */
 @Service
 public class TagService {
 
@@ -21,6 +22,7 @@ public class TagService {
         this.ledgerService = ledgerService;
     }
 
+    /** 查询账本标签列表 */
     public List<Tag> list(Long userId, Long ledgerId) {
         ledgerService.requireMember(ledgerId, userId);
         return tagMapper.selectList(
@@ -29,6 +31,7 @@ public class TagService {
                 .orderByAsc(Tag::getId));
     }
 
+    /** 新增标签 */
     public Tag create(Long userId, Long ledgerId, TagRequest req) {
         ledgerService.requireCreator(ledgerId, userId);
         Tag tag = new Tag();
@@ -41,6 +44,7 @@ public class TagService {
         return tag;
     }
 
+    /** 更新标签（名称/颜色） */
     public Tag update(Long userId, Long tagId, TagRequest req) {
         Tag tag = getOwned(tagId);
         ledgerService.requireCreator(tag.getLedgerId(), userId);
@@ -50,6 +54,7 @@ public class TagService {
         return tag;
     }
 
+    /** 删除标签 */
     public void delete(Long userId, Long tagId) {
         Tag tag = getOwned(tagId);
         ledgerService.requireCreator(tag.getLedgerId(), userId);

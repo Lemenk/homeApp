@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/** 分类服务：支出/收入分类的增删改查与启停（仅账本创建者可管理） */
 @Service
 public class CategoryService {
 
@@ -21,6 +22,7 @@ public class CategoryService {
         this.ledgerService = ledgerService;
     }
 
+    /** 查询账本分类列表（按排序值、ID 升序） */
     public List<Category> list(Long userId, Long ledgerId) {
         ledgerService.requireMember(ledgerId, userId);
         return categoryMapper.selectList(
@@ -29,6 +31,7 @@ public class CategoryService {
                 .orderByAsc(Category::getSort, Category::getId));
     }
 
+    /** 新增分类（默认启用） */
     public Category create(Long userId, Long ledgerId, CategoryRequest req) {
         ledgerService.requireCreator(ledgerId, userId);
         Category cat = new Category();
@@ -43,6 +46,7 @@ public class CategoryService {
         return cat;
     }
 
+    /** 更新分类（名称/图标/排序） */
     public Category update(Long userId, Long categoryId, CategoryRequest req) {
         Category cat = getOwned(categoryId);
         ledgerService.requireCreator(cat.getLedgerId(), userId);
@@ -64,6 +68,7 @@ public class CategoryService {
         return cat;
     }
 
+    /** 删除分类：软删除（置 enabled=0），历史账单不受影响 */
     public void delete(Long userId, Long categoryId) {
         Category cat = getOwned(categoryId);
         ledgerService.requireCreator(cat.getLedgerId(), userId);

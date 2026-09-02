@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/** 标签接口：标签列表、新增、更新、删除 */
 @RestController
 @RequestMapping("/api")
 public class TagController {
@@ -27,21 +28,25 @@ public class TagController {
         this.tagService = tagService;
     }
 
+    /** 查询账本下的标签列表 */
     @GetMapping("/ledgers/{ledgerId}/tags")
     public Result<List<Tag>> list(@PathVariable Long ledgerId) {
         return Result.ok(tagService.list(UserContext.require(), ledgerId));
     }
 
+    /** 新增标签 */
     @PostMapping("/ledgers/{ledgerId}/tags")
     public Result<Tag> create(@PathVariable Long ledgerId, @Valid @RequestBody TagRequest req) {
         return Result.ok(tagService.create(UserContext.require(), ledgerId, req));
     }
 
+    /** 更新标签（名称/颜色） */
     @PutMapping("/tags/{id}")
     public Result<Tag> update(@PathVariable Long id, @Valid @RequestBody TagRequest req) {
         return Result.ok(tagService.update(UserContext.require(), id, req));
     }
 
+    /** 删除标签 */
     @DeleteMapping("/tags/{id}")
     public Result<Void> delete(@PathVariable Long id) {
         tagService.delete(UserContext.require(), id);
